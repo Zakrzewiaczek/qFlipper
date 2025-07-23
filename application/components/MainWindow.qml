@@ -110,23 +110,40 @@ Item {
         opacity: 0.75
     }
 
-    Rectangle {
-        id: blackBorder
-        anchors.fill: parent
-        anchors.margins: -1
-        radius: bg.radius + 1
-        opacity: 0.5
-        color: "black"
-    }
+    // Rectangle {
+    //     id: blackBorder
+    //     anchors.fill: parent
+    //     anchors.margins: -1
+    //     radius: bg.radius + 1
+    //     opacity: 0.5
+    //     color: "black"
+    // }
 
     Rectangle {
         id: bg
         radius: 10
         anchors.fill: parent
 
-        color: "black"
-        border.color: Theme.color.mediumorange3
-        border.width: 2
+        color: Theme.color.bluepurple7
+        border.color: Theme.color.bluepurple5
+        border.width: 3
+    }
+
+    TextLabel {
+        id: momentumEditionLabel
+        x: bg.border.width + 8
+        y: bg.border.width - font.pixelSize / 2 + 18
+        z: 2
+
+        color: Theme.color.bluepurple2
+        opacity: 0.35
+
+        font.family: "Born2bSportyV2"
+        font.pixelSize: 34
+        // font.bold: true
+        capitalized: false
+
+        text: "Momentum Firmware"
     }
 
     WindowControls {
@@ -153,24 +170,24 @@ Item {
         width: 800 + border.width * 2
         height: 390 + border.width * 2
 
-        TextLabel {
-            id: versionLabel
-
-            anchors.top: parent.top
-            anchors.right: parent.right
-            anchors.margins: 10
-            anchors.rightMargin: 16
-
-            color: Theme.color.lightorange2
-            opacity: 0.5
-
-            font.family: "ProggySquareTT"
-            font.pixelSize: 16
-
-            text: App.version
-
-            // TODO: Implement copy version to clipboard
-        }
+        // TextLabel {
+        //     id: versionLabel
+        //
+        //     anchors.top: parent.top
+        //     anchors.right: parent.right
+        //     anchors.margins: 10
+        //     anchors.rightMargin: 16
+        //
+        //     color: Theme.color.bluepurple2
+        //     opacity: 0.7
+        //
+        //     font.family: "ProggySquareTT"
+        //     font.pixelSize: 16
+        //
+        //     text: App.version
+        //
+        //     // TODO: Implement copy version to clipboard
+        // }
 
         DeviceWidget {
             id: deviceWidget
@@ -360,8 +377,8 @@ Item {
         font.family: "Share Tech"
         font.capitalization: Font.AllUppercase
 
-        color: Theme.color.lightorange2
-        linkColor: Theme.color.lightorange2
+        color: Theme.color.lightred4
+        linkColor: Theme.color.lightred4
 
         onLinkActivated: Qt.openUrlExternally(Logger.logsFile)
 

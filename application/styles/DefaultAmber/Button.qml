@@ -46,24 +46,24 @@ T.Button {
     id: control
 
     property var foregroundColor: ColorSet {
-        normal: Theme.color.lightorange2
-        hover: Theme.color.lightorange1
-        down: Theme.color.darkorange1
-        disabled: Theme.color.mediumorange1
+        normal: Theme.color.bluepurple1
+        hover: Theme.color.bluepurple1
+        down: Theme.color.bluepurple1
+        disabled: "#9191BA"
     }
 
     property var backgroundColor: ColorSet {
-        normal: Theme.color.darkorange1
-        hover: Theme.color.mediumorange2
-        down: Theme.color.lightorange2
-        disabled: Theme.color.darkorange2
+        normal: "#27275E"
+        hover: "#3A3A6E"
+        down: Theme.color.bluepurple3
+        disabled: "#21214F"
     }
 
     property var strokeColor: ColorSet {
-        normal: Theme.color.lightorange2
-        hover: Theme.color.lightorange1
-        down: Theme.color.lightorange2
-        disabled: Theme.color.mediumorange1
+        normal: "#9191BA"
+        hover: "#9191BA"
+        down: Theme.color.bluepurple3
+        disabled: Theme.color.bluepurple3
     }
 
     property alias radius: bg.radius

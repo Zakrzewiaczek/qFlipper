@@ -23,7 +23,7 @@ Item {
     readonly property bool isHovered: iconMouseArea.containsMouse || labelMouseArea.containsMouse
     readonly property bool isCurrent: GridView.isCurrentItem
 
-    property color selectionColor: Color.transparent(Theme.color.darkorange1, delegate.isCurrent ? 1 : delegate.isHovered ? 0.5 : 0)
+    property color selectionColor: Color.transparent("#26264A", delegate.isCurrent ? 1 : delegate.isHovered ? 0.5 : 0)
 
     property ConfirmationDialog confirmationDialog
 
@@ -76,7 +76,7 @@ Item {
                 layer.enabled: true
 
                 sourceSize: Qt.size(28, 28)
-                color: Theme.color.lightorange2
+                color: Theme.color.bluepurple1
 
                 source: {
                     if(delegate.filePath === "/ext") {
@@ -128,7 +128,7 @@ Item {
                 font.pixelSize: 16
                 font.family: "Share Tech"
 
-                color: Theme.color.lightorange2
+                color: Theme.color.bluepurple1
                 horizontalAlignment: Text.AlignHCenter
 
                 maximumLineCount: 2
@@ -161,7 +161,7 @@ Item {
                 height: nameEdit.height + padding * 2
 
                 color: "black"
-                border.color: Theme.color.lightorange2
+                border.color: Theme.color.bluepurple1
                 border.width: 1
 
                 TextInput {
@@ -172,7 +172,7 @@ Item {
                     width: parent.width
                     font: nameLabel.font
 
-                    color: Theme.color.lightorange2
+                    color: Theme.color.bluepurple1
                     selectionColor: color
                     selectedTextColor: "black"
 

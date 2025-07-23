@@ -35,6 +35,14 @@ QtObject {
         readonly property color mediumred2: "#672715"
         readonly property color darkred1: "#451a0e"
         readonly property color darkred2: "#331400"
+
+        readonly property color bluepurple1: "#cfcfe8"
+        readonly property color bluepurple2: "#a1a1ce"
+        readonly property color bluepurple3: "#7474b0"
+        readonly property color bluepurple4: "#4e4e94"
+        readonly property color bluepurple5: "#32325E"
+        readonly property color bluepurple6: "#1d1d46"
+        readonly property color bluepurple7: "#0c0c1f"
     }
 
     readonly property var timing: QtObject {

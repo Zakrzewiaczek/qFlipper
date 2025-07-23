@@ -37,7 +37,7 @@ ColumnLayout {
             width: parent.width + control.radius
             height: control.radius * 2 + control.borderWidth * 2
             radius: control.radius
-            border.color: Theme.color.lightorange2
+            border.color: Theme.color.bluepurple1
             border.width: borderWidth
             anchors.right: parent.right
         }
@@ -51,7 +51,7 @@ ColumnLayout {
                 color: control.backgroundColor
                 width: parent.width + border.width
                 height: control.radius + control.borderWidth * 2
-                border.color: Theme.color.lightorange2
+                border.color: Theme.color.bluepurple1
                 border.width: borderWidth
             }
         }
@@ -76,7 +76,7 @@ ColumnLayout {
 
                 ctx.globalAlpha = 0.5;
                 ctx.lineDashOffset = 0.5;
-                ctx.strokeStyle = Theme.color.lightorange2;
+                ctx.strokeStyle = Theme.color.bluepurple1;
                 ctx.lineWidth = control.borderWidth * 2;
                 ctx.setLineDash([0.5, 1.25]);
 
@@ -90,16 +90,50 @@ ColumnLayout {
             }
 
             onVisibleChanged: if(visible) requestPaint();
+            
+            // Odświeżaj Canvas podczas animacji
+            Connections {
+                target: content
+                function onWidthChanged() { requestPaint(); }
+                function onHeightChanged() { requestPaint(); }
+            }
         }
 
-        StackLayout {
+        Item {
             id: content
             x: control.borderWidth
+            
+            property int currentIndex: 0
+            property var children: control.items
 
-            children: items
+            width: children.length > 0 && children[currentIndex] ? children[currentIndex].implicitWidth : 0
+            height: children.length > 0 && children[currentIndex] ? children[currentIndex].implicitHeight : 0
 
-            width: children[currentIndex].implicitWidth
-            height: children[currentIndex].implicitHeight
+            Repeater {
+                id: repeater
+                model: control.items
+                delegate: Item {
+                    property int delegateIndex: index
+                    property var delegateData: modelData
+                    
+                    width: delegateData.implicitWidth
+                    height: delegateData.implicitHeight
+                    
+                    opacity: delegateIndex === content.currentIndex ? 1.0 : 0.0
+                    visible: opacity > 0
+                    
+                    Behavior on opacity {
+                        NumberAnimation { 
+                            duration: 200
+                            easing.type: Easing.InOutQuad
+                        }
+                    }
+                    
+                    Component.onCompleted: {
+                        delegateData.parent = this;
+                    }
+                }
+            }
 
             Behavior on width {
                 PropertyAnimation {
@@ -129,7 +163,7 @@ ColumnLayout {
             width: parent.width
             height: control.radius * 2 + control.borderWidth * 2
             radius: control.radius
-            border.color: Theme.color.lightorange2
+            border.color: "#BDBDD4"
             border.width: borderWidth
             anchors.bottom: parent.bottom
         }

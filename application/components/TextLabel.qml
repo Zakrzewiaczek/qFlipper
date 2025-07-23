@@ -7,7 +7,7 @@ Text {
 
     antialiasing: Mitigations.fontRenderingFix
 
-    color: Theme.color.lightorange2
+    color: Theme.color.bluepurple1
 
     font.pixelSize: 32
     font.family: "HaxrCorp 4089"

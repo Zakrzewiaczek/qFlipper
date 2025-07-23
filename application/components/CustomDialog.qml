@@ -38,7 +38,7 @@ Popup {
     background: Rectangle {
         id: shadow
         color: "black"
-        opacity: 0.8
+        opacity: 0.7
     }
 
     contentItem: Item {
@@ -64,8 +64,8 @@ Popup {
 
             anchors.centerIn: parent
 
-            color: "black"
-            border.color: Theme.color.lightorange2
+            color: Theme.color.bluepurple6
+            border.color: Theme.color.bluepurple2
 
             Rectangle {
                 id: header
@@ -74,8 +74,8 @@ Popup {
                 y: contentBg.border.width
                 width: contentBg.width - contentBg.border.width * 2
                 radius: invertTitle ? 0 : contentBg.radius - contentBg.border.width
-                color: invertTitle ? Theme.color.lightorange2 : Theme.color.darkorange1
-
+                color: invertTitle ? Theme.color.bluepurple2 : Theme.color.bluepurple3
+ 
                 Rectangle {
                     color: parent.color
                     width: parent.width
@@ -91,7 +91,7 @@ Popup {
                     anchors.leftMargin: 8
                     anchors.rightMargin: 8
 
-                    color: invertTitle ? Theme.color.darkorange1 : Theme.color.lightorange2
+                    color: invertTitle ? Theme.color.bluepurple6 : Theme.color.bluepurple1
 
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
@@ -113,9 +113,9 @@ Popup {
                             height: 24
 
                             backgroundColor: ColorSet {
-                                normal: Theme.color.darkorange1
-                                hover: Theme.color.mediumorange2
-                                down: Theme.color.lightred2
+                                normal: invertTitle ? Theme.color.bluepurple3 : "#2A2A4F"
+                                hover: invertTitle ? "#7F7FC2" : "#383869"
+                                down: invertTitle ? "#5E5E8F" : "#1C1C36"
                             }
 
                             anchors.centerIn: parent

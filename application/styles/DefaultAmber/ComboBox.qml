@@ -1,7 +1,11 @@
 /****************************************************************************
 **
 ** Copyright (C) 2017 The Qt Company Ltd.
-** Contact: http://www.qt.io/licensing/
+** Contact: ht        color: !control.enabled ? backgroundColor.disabled : control.down ? backgroundColor.down :
+                control.hovered ? backgroundColor.hover : backgroundColor.normal
+        border.color: !control.enabled ? strokeColor.disabled : control.down ? strokeColor.down :
+                       control.hovered ? strokeColor.hover : strokeColor.normal
+        border.width: 2ww.qt.io/licensing/
 **
 ** This file is part of the Qt Quick Controls 2 module of the Qt Toolkit.
 **
@@ -48,24 +52,24 @@ T.ComboBox {
     id: control
 
     property var foregroundColor: ColorSet {
-        normal: Theme.color.lightorange2
-        hover: Theme.color.lightorange1
-        down: Theme.color.darkorange1
-        disabled: Theme.color.mediumorange1
+        normal: Theme.color.bluepurple1
+        hover: Theme.color.bluepurple1
+        down: "#3c3c70"
+        disabled: "#9191BA"
     }
 
     property var backgroundColor: ColorSet {
-        normal: Theme.color.darkorange1
-        hover: Theme.color.mediumorange2
-        down: Theme.color.lightorange2
-        disabled: Theme.color.darkorange2
+        normal: "#27275E"
+        hover: "#3F3F78"
+        down: Theme.color.bluepurple1
+        disabled: "#21214F"
     }
 
     property var strokeColor: ColorSet {
-        normal: Theme.color.lightorange2
-        hover: Theme.color.lightorange1
-        down: Theme.color.lightorange2
-        disabled: Theme.color.mediumorange1
+        normal: Theme.color.bluepurple1
+        hover: Theme.color.bluepurple1
+        down: Theme.color.bluepurple1
+        disabled: Theme.color.bluepurple1
     }
 
     property alias radius: bg.radius
@@ -135,6 +139,9 @@ T.ComboBox {
     background: AdvancedRectangle {
         id: bg
 
+        layer.enabled: true // Fixes opacity artifacts
+        smooth: true
+
         implicitWidth: 140
         implicitHeight: 42
 
@@ -142,6 +149,7 @@ T.ComboBox {
                 control.hovered ? backgroundColor.hover : backgroundColor.normal
         border.color: !control.enabled ? strokeColor.disabled : control.down ? strokeColor.down :
                        control.hovered ? strokeColor.hover : strokeColor.normal
+        // border.color: "red"
         border.width: 2
 
         topRadius: control.popup.visible && control.popup.y < 0 ? 0 : radius

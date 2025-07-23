@@ -27,12 +27,12 @@ ItemDelegate {
             Layout.bottomMargin: 2
 
             color: text === "development" ? "blueviolet" :
-                   text === "release" ? "limegreen" : "orangered"
+                text === "release" ? "limegreen" : "orangered"
         }
 
         TextLabel {
-            text: control.text.replace(/^wip-/, '')
-            color: control.down ? Theme.color.darkorange1 : control.hovered ? Theme.color.lightorange1 : Theme.color.lightorange2
+            text: control.text
+            color: Theme.color.bluepurple1
             Layout.fillWidth: true
         }
     }
@@ -40,7 +40,7 @@ ItemDelegate {
     background: AdvancedRectangle {
         x: 2
         width: parent.width - 4
-        color: control.down ? Theme.color.lightorange2 : control.hovered ? Theme.color.mediumorange2 : Theme.color.darkorange1
+        color: control.down ? Theme.color.bluepurple3 : control.hovered ? "#3A3A6E" : "#27275E"
         bottomRadius: control.last ? 5 : 0
 
         Behavior on color {

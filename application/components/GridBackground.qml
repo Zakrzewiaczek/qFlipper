@@ -9,11 +9,11 @@ Rectangle {
 
     radius: 9
     border.width: 3
-    border.color: Theme.color.lightorange2
+    border.color: Theme.color.bluepurple2
 
     gradient: Gradient {
-        GradientStop { position: 0; color: "#090400" }
-        GradientStop { position: 1; color: "#210F00" }
+        GradientStop { position: 0; color: "#0F0F24" }
+        GradientStop { position: 1; color: "#212152" }
     }
 
     Item {
@@ -26,10 +26,10 @@ Rectangle {
             width: parent.width
             height: 320
             gradient: Gradient {
-                GradientStop {position: 0;     color: Color.transparent(Theme.color.lightorange2, 0)}
-                GradientStop {position: 0.6;   color: Color.transparent(Theme.color.lightorange2, 0.01)}
-                GradientStop {position: 0.99;  color: Color.transparent(Theme.color.lightorange2, 0.07)}
-                GradientStop {position: 1;     color: Color.transparent(Theme.color.lightorange2, 0)}
+                GradientStop {position: 0;     color: Color.transparent(Theme.color.bluepurple1, 0)}
+                GradientStop {position: 0.6;   color: Color.transparent(Theme.color.bluepurple1, 0.01)}
+                GradientStop {position: 0.99;  color: Color.transparent(Theme.color.bluepurple1, 0.07)}
+                GradientStop {position: 1;     color: Color.transparent(Theme.color.bluepurple1, 0)}
             }
         }
 
@@ -59,7 +59,7 @@ Rectangle {
             const cellSize = width / numCells;
 
             const ctx = getContext("2d");
-            ctx.strokeStyle = "#aa5115";
+            ctx.strokeStyle = "#4e4e94";
             ctx.lineWidth = 2;
 
             for(let ypos = cellSize; ypos < height; ypos += cellSize) {

@@ -63,7 +63,7 @@ T.Switch {
 
         radius: 9
 
-        color: control.checked ? Theme.color.mediumorange5 : Theme.color.darkorange1
+        color: control.checked ? Theme.color.bluepurple4 : Theme.color.bluepurple5
 
         Rectangle {
             x: Math.max(2, Math.min(parent.width - width - 2, control.visualPosition * parent.width - (width / 2)))
@@ -71,7 +71,7 @@ T.Switch {
             width: 14
             height: 14
             radius: 7
-            color: control.checked ? Theme.color.lightorange2 : Theme.color.mediumorange5
+            color: control.checked ? Theme.color.bluepurple2 : Theme.color.bluepurple3
 
             Behavior on x {
                 SmoothedAnimation { velocity: 200 }
@@ -85,6 +85,6 @@ T.Switch {
 
         text: control.text
         font: control.font
-        color: control.checked ? Theme.color.lightorange2 : Theme.color.mediumorange5
+        color: control.checked ? Theme.color.bluepurple1 : Theme.color.bluepurple3
     }
 }

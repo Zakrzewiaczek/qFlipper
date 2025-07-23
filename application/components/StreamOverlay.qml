@@ -17,8 +17,8 @@ AbstractOverlay {
         anchors.margins: -11
 
         radius: 10
-        color: Theme.color.lightorange2
-        border.color: Theme.color.mediumorange1
+        color: Theme.color.bluepurple1
+        border.color: Theme.color.bluepurple4
         border.width: 3
     }
 
@@ -28,8 +28,8 @@ AbstractOverlay {
         x: 38
         y: 32
 
-        foregroundColor: "black"
-        backgroundColor: Theme.color.lightorange2
+        foregroundColor: Theme.color.bluepurple7
+        backgroundColor: Theme.color.bluepurple1
         zoomFactor: 4
         frame: Backend.screenStreamer.screenFrame
     }
@@ -89,7 +89,7 @@ AbstractOverlay {
         anchors.bottom: parent.bottom
         anchors.margins: 14
 
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple1
         source: "qrc:/assets/gfx/symbolic/info-big.svg"
         sourceSize: Qt.size(32, 32)
 

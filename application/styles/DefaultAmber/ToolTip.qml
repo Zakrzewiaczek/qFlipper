@@ -79,14 +79,15 @@ T.ToolTip {
         text: control.text
         font: control.font
         wrapMode: Text.Wrap
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple2
     }
 
     background: Rectangle {
         anchors.fill: parent
 
-        border.width: 1
-        border.color: Theme.color.mediumorange3
+        radius: 5
+        border.width: 2
+        border.color: Theme.color.bluepurple4
         color: "black"
     }
 

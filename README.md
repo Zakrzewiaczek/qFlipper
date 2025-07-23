@@ -3,13 +3,18 @@
 ### Graphical desktop application for updating [Flipper Zero](https://flipperzero.one/) firmware via PC
 qFlipper is completely open source and based on [Qt](https://www.qt.io/) framework. Runs on Windows, macOS, Linux.
 
-<img alt="qFlipper" width="450" src="https://cdn.flipperzero.one/qflipper_logo_with_connected_flipper.png" />
+<img alt="qFlipper" width="1671" height="799" src="https://github.com/user-attachments/assets/662e6c08-3a82-4745-aac4-5c367daf9959" />
+<br><br>
+
+> [!IMPORTANT]  
+> This is **not** an official installer! The official qFlipper app repo can be found [here](https://github.com/flipperdevices/qFlipper)
 
 ## Download
 
-Download official qFlipper builds here: [update.flipperzero.one](https://update.flipperzero.one/)
+Download official qFlipper builds here: [update.flipperzero.one](https://update.flipperzero.one/)<br>
+Download qFlipper Momentum Edition builds here: [https://github.com/Zakrzewiaczek/qFlipper/releases](https://github.com/Zakrzewiaczek/qFlipper/releases)
 
-<a href="https://update.flipperzero.one"><img width="300" alt="download qFlipper Button" src="https://cdn.flipperzero.one/download_qFlipper_button.png" /></a>
+<a href="https://github.com/Zakrzewiaczek/qFlipper/releases"><img width="340" height="76" alt="button_download-qflipper" src="https://github.com/user-attachments/assets/963fd842-4b79-446a-8e4a-5f102834e7c9" /></a>
 
 
 ## Features
@@ -122,7 +127,7 @@ See [contrib](./contrib) for available options.
 ## Reporting bugs
 qFlipper is a project under active development. Please report any encountered bugs to make it better!
 
-The (mostly) complete guide is located [here](./.github/ISSUE_TEMPLATE/bug_report.md).
+The (mostly) complete guide is located [here](./.github/ISSUE_TEMPLATE/01_bug_report.yml).
 
 ## Known bugs
 

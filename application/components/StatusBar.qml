@@ -12,7 +12,7 @@ Rectangle {
     readonly property bool errorOccured: Backend.backendState === Backend.ErrorOccured ||
                                          Backend.firmwareUpdateState === Backend.ErrorOccured
 
-    color: errorOccured ? Theme.color.darkred2 : Theme.color.darkorange1
+    color: errorOccured ? Theme.color.darkred2 : "#2F2F57"
 
     RowLayout {
         anchors.fill: parent
@@ -45,7 +45,7 @@ Rectangle {
                   Backend.firmwareUpdateState === ApplicationBackend.ErrorOccured ? qsTr("Cannot connect to update server") :
                   Backend.firmwareUpdateState === ApplicationBackend.Checking ? qsTr("Checking for firmware updates...") : qsTr("Ready.")
 
-            color: control.errorOccured ? Theme.color.lightred4 : Theme.color.lightorange2
+            color: control.errorOccured ? Theme.color.lightred4 : Theme.color.bluepurple2
 
             verticalAlignment: Text.AlignVCenter
             Layout.fillWidth: true

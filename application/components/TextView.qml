@@ -36,10 +36,10 @@ Item {
                 font.letterSpacing: -1
                 font.family: "Share Tech Mono"
 
-                selectionColor: Theme.color.lightorange2
-                selectedTextColor: Theme.color.darkorange1
+                selectionColor: Theme.color.bluepurple1
+                selectedTextColor: Theme.color.bluepurple7
 
-                color: Theme.color.lightorange2
+                color: Theme.color.bluepurple1
                 wrapMode: Text.Wrap
 
                 readOnly: true

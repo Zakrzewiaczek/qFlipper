@@ -24,7 +24,7 @@ Item {
             anchors.right: parent.right
             source: "qrc:/assets/gfx/symbolic/arrow-expand.svg"
             sourceSize: Qt.size(14, 14)
-            color: Theme.color.lightorange1
+            color: Theme.color.bluepurple1
         }
 
         IconImage {
@@ -33,7 +33,7 @@ Item {
             anchors.left: parent.left
             source: "qrc:/assets/gfx/symbolic/arrow-expand.svg"
             sourceSize: Qt.size(14, 14)
-            color: Theme.color.lightorange1
+            color: Theme.color.bluepurple1
         }
     }
 

@@ -9,23 +9,23 @@ Button {
     implicitHeight: 34
 
     foregroundColor: ColorSet {
-        normal: Theme.color.lightorange2
-        hover: Theme.color.lightorange1
-        down: Theme.color.darkorange1
-        disabled: Theme.color.mediumorange1
+        normal: "#B1B1E3"
+        hover: Theme.color.bluepurple1
+        down: Theme.color.bluepurple5
+        disabled: Theme.color.bluepurple2
     }
 
     backgroundColor: ColorSet {
-        normal: control.highlighted ? Theme.color.darkorange1 : Theme.color.transparent
-        hover: Theme.color.mediumorange2
-        down: Theme.color.lightorange2
+        normal: Theme.color.transparent
+        hover: "#7f7474b0" // bluepurple2 with 50% opacity
+        down: Theme.color.bluepurple2
         disabled: Theme.color.transparent
     }
 
     strokeColor: ColorSet {
-        normal: control.highlighted ? Theme.color.lightorange2 : Theme.color.mediumorange1
-        hover: Theme.color.lightorange1
-        down: Theme.color.lightorange2
-        disabled: Theme.color.mediumorange1
+        normal: Theme.color.bluepurple4
+        hover: Theme.color.bluepurple3
+        down: Theme.color.bluepurple2
+        disabled: "#3D3D73"
     }
 }

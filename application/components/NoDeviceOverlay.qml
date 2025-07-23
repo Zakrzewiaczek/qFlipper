@@ -31,7 +31,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 264
 
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple1
         text: qsTr("Connect your Flipper")
 
         font.family: "Born2bSportyV2"

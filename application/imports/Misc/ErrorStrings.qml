@@ -5,7 +5,7 @@ import QFlipper 1.0
 
 QtObject {
     readonly property string errorStyle:
-"<style type='text/css'>p { margin-top: 0px; margin-bottom: 5px; } a { color: #fe8a2c; } </style>"
+"<style type='text/css'>p { margin-top: 0px; margin-bottom: 5px; } a { color: #FF3C00; } </style>"
 
     readonly property string errorInvalidDevice:
 "<p>Device cannot be recognized.</p>

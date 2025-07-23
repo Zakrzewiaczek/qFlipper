@@ -85,7 +85,7 @@ AbstractOverlay {
         anchors.topMargin: -2
 
         currentIndex: tabs.currentIndex
-        backgroundColor: Qt.rgba(0, 0, 0, fileManagerTab.checked)
+        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked ? 0.9 : 0)
 
         items: [
             DeviceInfo { id: deviceInfoPane },
@@ -146,7 +146,7 @@ AbstractOverlay {
         x: centerX + centerOffset - width - 4
         y: 19
 
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple2
 
         font.family: "Born2bSportyV2"
         font.pixelSize: 48
@@ -274,6 +274,105 @@ AbstractOverlay {
         action: installFromFileAction
     }
 
+    RowLayout {
+        id: websiteLinks
+        anchors.left: parent.left
+        anchors.bottom: parent.bottom
+        anchors.leftMargin: 28
+        anchors.bottomMargin: 15
+        spacing: 20
+
+        // GitHub link
+        Item {
+            Layout.preferredWidth: 30; Layout.preferredHeight: 30
+            IconImage {
+                id: githubImg
+                anchors.fill: parent
+                source: "qrc:/assets/gfx/logos/github.svg"
+                color: Theme.color.bluepurple3
+                opacity: 0.5
+                // hover animations: smooth scale and opacity
+                transformOrigin: Item.Center
+                Behavior on scale {
+                    NumberAnimation { duration: 350; easing.type: Easing.InOutCubic }
+                }
+                Behavior on opacity {
+                    NumberAnimation { duration: 250; easing.type: Easing.InOutCubic }
+                }
+            }
+            MouseArea {
+                id: githubArea
+                anchors.fill: parent
+                z: 2  // bring to front
+                enabled: true
+                acceptedButtons: Qt.LeftButton
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onContainsMouseChanged: {
+                    if (containsMouse) {
+                        githubImg.scale = 1.15;  // enlarge on hover
+                        githubImg.opacity = 1.0;
+                    } else {
+                        githubImg.scale = 1.0;
+                        githubImg.opacity = 0.5;
+                    }
+                }
+                onClicked:  Qt.openUrlExternally("https://github.com/Zakrzewiaczek/qFlipper")
+            }
+            ToolTip {
+                text: qsTr("qFlipper Momentum Edition GitHub repository")
+                visible: githubArea.containsMouse
+                delay: 750
+                y: parent.height + 7 // fix y position
+            }
+        }
+
+        // Website link
+        Item {
+            Layout.preferredWidth: 30; Layout.preferredHeight: 30
+            IconImage {
+                id: websiteImg
+                anchors.fill: parent
+                source: "qrc:/assets/gfx/logos/website.svg"
+                color: Theme.color.bluepurple3
+                opacity: 0.5
+                // hover animations: smooth scale and opacity
+                transformOrigin: Item.Center
+                Behavior on scale {
+                    NumberAnimation { duration: 350; easing.type: Easing.InOutCubic }
+                }
+                Behavior on opacity {
+                    NumberAnimation { duration: 250; easing.type: Easing.InOutCubic }
+                }
+            }
+            MouseArea {
+                id: websiteArea
+                anchors.fill: parent
+                z: 2  // bring to front
+                enabled: true
+                acceptedButtons: Qt.LeftButton
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onContainsMouseChanged: {
+                    if (containsMouse) {
+                        websiteImg.scale = 1.15;  // enlarge on hover
+                        websiteImg.opacity = 1.0;
+                    } else {
+                        websiteImg.scale = 1.0;
+                        websiteImg.opacity = 0.5;
+                    }
+                }
+                onClicked:  Qt.openUrlExternally("https://momentum-fw.dev/")
+            }
+            ToolTip {
+                text: qsTr("Momentum Firmware official website")
+                visible: websiteArea.containsMouse
+                delay: 750
+                y: parent.height + 7 // fix y position
+            }
+        }
+    }
+
     Action {
         id: updateButtonAction
 
@@ -318,8 +417,6 @@ AbstractOverlay {
                 return qsTr("No data");
             } else if(Preferences.updateChannel === "development") {
                 str = "Dev";
-            } else if(Preferences.updateChannel === "release-candidate") {
-                str = "RC";
             } else if(Preferences.updateChannel === "release") {
                 str = "Release";
             } else {

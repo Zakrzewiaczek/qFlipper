@@ -49,18 +49,32 @@ T.MenuItem {
 
     readonly property bool destructive : text.startsWith("!")
 
+    // property var foregroundColor: ColorSet {
+    //     normal: destructive ? Theme.color.lightred4 : Theme.color.lightorange2
+    //     hover: destructive ? Theme.color.lightred4 : Theme.color.lightorange1
+    //     down: destructive ? Theme.color.darkred1 : Theme.color.darkorange1
+    //     disabled: destructive ? Theme.color.mediumred1 : Theme.color.mediumorange1
+    // }
+
+    // property var backgroundColor: ColorSet {
+    //     normal: Theme.color.darkorange1
+    //     hover: destructive ? Theme.color.mediumred2 : Theme.color.mediumorange2
+    //     down: destructive ? Theme.color.lightred4 : Theme.color.lightorange2
+    //     disabled: Theme.color.transparent
+    // }
+
     property var foregroundColor: ColorSet {
-        normal: destructive ? Theme.color.lightred4 : Theme.color.lightorange2
-        hover: destructive ? Theme.color.lightred4 : Theme.color.lightorange1
-        down: destructive ? Theme.color.darkred1 : Theme.color.darkorange1
-        disabled: destructive ? Theme.color.mediumred1 : Theme.color.mediumorange1
+        normal: destructive ? Theme.color.lightred4 : Theme.color.bluepurple1
+        hover: destructive ? Theme.color.lightred4 : Theme.color.bluepurple1
+        down: destructive ? Theme.color.darkred1 : Theme.color.bluepurple1
+        disabled: "#9191BA"
     }
 
     property var backgroundColor: ColorSet {
-        normal: Theme.color.darkorange1
-        hover: destructive ? Theme.color.mediumred2 : Theme.color.mediumorange2
-        down: destructive ? Theme.color.lightred4 : Theme.color.lightorange2
-        disabled: Theme.color.transparent
+        normal: destructive ? "#592212" : "#27275E"
+        hover: destructive ? "#822F15" : "#42427D"
+        down: destructive ? Theme.color.lightred4 : Theme.color.bluepurple3
+        disabled: "#21214F"
     }
 
     implicitWidth: Math.max(implicitBackgroundWidth + leftInset + rightInset,
@@ -127,13 +141,15 @@ T.MenuItem {
     }
 
     background: Rectangle {
-        x: 1
+        // opacity: 0 // debug
+
+        x: 2
         y: 1
 
         implicitWidth: 150
         implicitHeight: 25
 
-        width: control.width - 2
+        width: control.width - 4
         color: !control.enabled ? backgroundColor.disabled : control.down ? backgroundColor.down :
                 control.hovered ? backgroundColor.hover : backgroundColor.normal
 

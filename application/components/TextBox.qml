@@ -14,8 +14,10 @@ Rectangle {
     implicitHeight: content.implicitHeight + padding * 2
     radius: 6
 
-    color: "black"
-    border.color: Theme.color.lightorange2
+    color: Theme.color.bluepurple7
+    border.color: Theme.color.bluepurple2
+
+    border.width: 2
 
     MouseArea {
         id: mouseArea
@@ -31,7 +33,7 @@ Rectangle {
 
         text: control.style + control.text
 
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple1
         width: control.width - control.padding * 2
 
         font.pixelSize: 16

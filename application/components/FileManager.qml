@@ -57,11 +57,11 @@ Item {
                 width: 500
                 height: 30
 
-                color: "black"
+                color: Theme.color.bluepurple7
                 radius: 6
 
                 border.width: 2
-                border.color: Theme.color.mediumorange1
+                border.color: Theme.color.bluepurple2
 
                 RowLayout {
                     anchors.fill: parent
@@ -72,7 +72,7 @@ Item {
                     IconImage {
                         Layout.alignment: Qt.AlignVCenter
 
-                        color: Theme.color.lightorange2
+                        color: Theme.color.bluepurple1
                         sourceSize: Qt.size(16, 16)
                         source: {
                             const path = Backend.fileManager.currentPath
@@ -94,7 +94,8 @@ Item {
                         font.pixelSize: 18
                         font.family: "Share Tech"
 
-                        color: Theme.color.lightorange2
+                        // color: Theme.color.lightorange2
+                        color: Theme.color.bluepurple1
                         elide: Text.ElideMiddle
 
                         text: {

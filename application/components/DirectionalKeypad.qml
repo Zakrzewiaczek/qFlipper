@@ -20,10 +20,10 @@ Item {
         width: 168
         height: width
         radius: width / 2
-        color: Theme.color.darkorange1
-        border.color: Theme.color.lightorange1
-        border.width: 2
-
+        color: "#242445"
+        border.color: Theme.color.bluepurple2
+        border.width: 3
+        
         GridLayout {
             anchors.centerIn: parent
             rowSpacing: columnSpacing

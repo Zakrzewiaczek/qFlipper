@@ -12,15 +12,15 @@
      id="defs10" />
   <path
      d="M26 51C39.8071 51 51 39.8071 51 26C51 12.1929 39.8071 1 26 1C12.1928 1 1 12.1929 1 26C1 39.8071 12.1928 51 26 51Z"
-     fill="#FE8A2C"
-     stroke="#FE8A2C"
+     fill="#a1a1ce"
+     stroke="#a1a1ce"
      stroke-width="2"
      stroke-linecap="round"
      stroke-linejoin="round"
      id="path2" />
   <path
      d="M17 25L9 18L17 11V15H32C43 15 43 26 43 27C43 28 43 39 32 39H16V33H32C38.5 33 38.8072 21 32 21H17V25Z"
-     fill="#3A1F10"
+     fill="#242445"
      id="path4"
-     style="fill:#491d0f;fill-opacity:1" />
+     style="fill:#242445;fill-opacity:1" />
 </svg>

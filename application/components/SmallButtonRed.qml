@@ -16,7 +16,7 @@ SmallButton {
 
     backgroundColor: ColorSet {
         normal: Theme.color.transparent
-        hover: Theme.color.mediumred2
+        hover: "#99672715" // mediumred2 with 60% opacity
         down: Theme.color.lightred2
         disabled: Theme.color.transparent
     }

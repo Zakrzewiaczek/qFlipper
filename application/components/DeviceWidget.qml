@@ -70,8 +70,8 @@ Image {
                  Backend.backendState > ApplicationBackend.WaitingForDevices &&
                  Backend.backendState < ApplicationBackend.ScreenStreaming
 
-        foregroundColor: Theme.color.darkorange1
-        backgroundColor: Theme.color.lightorange2
+        foregroundColor: "#323263"
+        backgroundColor: Theme.color.bluepurple1
 
         frame: Backend.screenStreamer.screenFrame
     }

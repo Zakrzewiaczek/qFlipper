@@ -85,10 +85,13 @@ T.Menu {
     background: Rectangle {
         implicitWidth: 150
         implicitHeight: 25
-        border.width: 1
 
-        color: Theme.color.darkorange1
-        border.color: Theme.color.lightorange2
+        radius: 5
+        border.width: 2
+        
+        color: Theme.color.transparent
+        border.color: Theme.color.bluepurple2
+        z: 2
     }
 
     T.Overlay.modal: Rectangle {

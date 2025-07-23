@@ -54,7 +54,7 @@ T.ScrollView {
         id: bg
         radius: 7
         color: Theme.color.transparent
-        border.color: Theme.color.mediumorange3
+        border.color: Theme.color.bluepurple3
         border.width: 2
         z: control.children.length //Make the border go over the text
     }

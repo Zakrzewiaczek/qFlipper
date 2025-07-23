@@ -29,7 +29,7 @@ Item {
         y: verticalPadding
 
         TransparentLabel {
-            color: Theme.color.lightorange2
+            color: Theme.color.bluepurple1
             text: qsTr("Firmware update channel")
         }
 
@@ -58,7 +58,7 @@ Item {
         }
 
         TransparentLabel {
-            color: Theme.color.lightorange2
+            color: Theme.color.bluepurple1
             text: qsTr("Backup & Restore")
         }
 
@@ -131,7 +131,7 @@ Item {
         }
 
         TransparentLabel {
-            color: Theme.color.lightorange2
+            color: Theme.color.bluepurple1
             text: qsTr("Application update")
             visible: Preferences.checkAppUpdates
         }

@@ -109,7 +109,7 @@ CustomDialog {
                 Layout.fillWidth: true
                 Layout.bottomMargin: 14
 
-                color: App.updater.state === ApplicationUpdater.ErrorOccured ? Theme.color.lightred3 : Theme.color.lightorange2
+                color: App.updater.state === ApplicationUpdater.ErrorOccured ? Theme.color.lightred3 : Theme.color.bluepurple1
             }
         }
     }

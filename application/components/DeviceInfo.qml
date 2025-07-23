@@ -30,14 +30,16 @@ Item {
             TextLabel {
                 text: qsTr("Firmware")
                 visible: extraFields
+                color: Theme.color.bluepurple1
                 horizontalAlignment: Text.AlignRight
                 Layout.fillWidth: true
+                Layout.bottomMargin: 6
             }
 
             TextLabel {
                 text: qsTr("Build Date")
                 visible: extraFields
-                color: Theme.color.mediumorange4
+                color: Theme.color.bluepurple3
                 horizontalAlignment: Text.AlignRight
                 Layout.fillWidth: true
             }
@@ -46,7 +48,7 @@ Item {
                 text: qsTr("SD Card")
                 visible: extraFields
                 horizontalAlignment: Text.AlignRight
-                color: Theme.color.mediumorange4
+                color: Theme.color.bluepurple3
                 Layout.fillWidth: true
             }
 
@@ -54,12 +56,12 @@ Item {
                 text: qsTr("Databases")
                 visible: extraFields
                 horizontalAlignment: Text.AlignRight
-                color: Theme.color.mediumorange4
+                color: Theme.color.bluepurple3
                 Layout.fillWidth: true
             }
 
             TextLabel {
-                color: extraFields ? Theme.color.mediumorange4 : Theme.color.lightorange2
+                color: extraFields ? Theme.color.bluepurple3 : Theme.color.bluepurple2
                 text: qsTr("Hardware")
                 horizontalAlignment: Text.AlignRight
                 Layout.fillWidth: true
@@ -69,7 +71,7 @@ Item {
                 text: qsTr("Radio FW")
                 visible: extraFields
                 horizontalAlignment: Text.AlignRight
-                color: Theme.color.mediumorange4
+                color: Theme.color.bluepurple3
                 Layout.fillWidth: true
             }
         }
@@ -80,30 +82,43 @@ Item {
             TextLabel {
                 text: !deviceInfo ? text : deviceInfo.firmware.branch === "dev" ?
                        deviceInfo.firmware.commit : deviceInfo.firmware.version
+                
+                color: {
+                    if(deviceInfo.firmware.branch === "dev") {
+                        return "darkorchid";
+                    } else if(deviceInfo.firmware.branch === "rc") {
+                        return "darkorchid";
+                    } else if(deviceInfo.firmware.branch === "release") {
+                        return Theme.color.lightgreen;
+                    } else {
+                        return Theme.color.lightred4;
+                    }
+                }
 
                 visible: extraFields
+                Layout.bottomMargin: 6
             }
 
             TextLabel {
                 text: deviceInfo ? deviceInfo.firmware.date.toLocaleDateString(Qt.locale("C"), Locale.ShortFormat) : text
-                color: Theme.color.lightorange3
+                color: "#AFAFE0"
                 visible: extraFields
             }
 
             TextLabel {
                 text: deviceInfo && deviceInfo.storage.isExternalPresent ? deviceInfo.storage.externalFree + qsTr("% Free") : qsTr("Not present")
-                color: deviceInfo && deviceInfo.storage.isExternalPresent ? Theme.color.lightorange3 : Theme.color.lightred3
+                color: deviceInfo && deviceInfo.storage.isExternalPresent ? "#AFAFE0" : Theme.color.lightred3
                 visible: extraFields
             }
 
             TextLabel {
                 text: deviceInfo && deviceInfo.storage.isAssetsInstalled ? qsTr("Installed") : qsTr("Missing")
-                color: deviceInfo && deviceInfo.storage.isAssetsInstalled ? Theme.color.lightorange3 : Theme.color.lightred3
+                color: deviceInfo && deviceInfo.storage.isAssetsInstalled ? "#AFAFE0" : Theme.color.lightred3
                 visible: extraFields
             }
 
             TextLabel {
-                color: extraFields ? Theme.color.lightorange3 : Theme.color.lightorange2
+                color: extraFields ? "#AFAFE0" : Theme.color.bluepurple1
 
                 text: {
                     if(!deviceInfo) {
@@ -121,7 +136,7 @@ Item {
 
             TextLabel {
                 text: deviceInfo && deviceInfo.radioVersion.length ? "%1 %2".arg(deviceInfo.radioVersion).arg(stackTypeString(deviceInfo.stackType)) : qsTr("Corrupted")
-                color: deviceInfo && deviceInfo.radioVersion.length ? Theme.color.lightorange3 : Theme.color.lightred3
+                color: deviceInfo && deviceInfo.radioVersion.length ? "#AFAFE0" : Theme.color.lightred3
                 visible: extraFields
             }
         }

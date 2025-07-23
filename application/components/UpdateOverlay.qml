@@ -14,7 +14,7 @@ AbstractOverlay {
         anchors.horizontalCenter: parent.horizontalCenter
         y: 19
 
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple1
 
         font.family: "Born2bSportyV2"
         font.pixelSize: 48
@@ -65,7 +65,7 @@ AbstractOverlay {
         anchors.topMargin: 20
         anchors.horizontalCenter: parent.horizontalCenter
         text: !deviceState ? text : deviceState.isError ? deviceState.errorString : deviceState.statusString
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple1
     }
 
     MouseArea {

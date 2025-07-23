@@ -59,16 +59,16 @@ T.Dialog {
 
     background: Rectangle {
         radius: 9
-        color: "black"
+        color: Theme.color.bluepurple6
         border.width: 3
-        border.color: Theme.color.lightorange2
+        border.color: Theme.color.bluepurple2
     }
 
     header: Text {
         text: control.title
         visible: control.title
         padding: control.padding
-        color: Theme.color.lightorange2
+        color: Theme.color.bluepurple2
         horizontalAlignment: Text.AlignHCenter
         font.pixelSize: 48
     }

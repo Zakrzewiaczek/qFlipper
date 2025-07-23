@@ -11,13 +11,13 @@ Button {
     padding: 0
     font.capitalization: Font.MixedCase
 
-    property color linkColor: Theme.color.lightorange2
+    property color linkColor: Theme.color.bluepurple1
 
     foregroundColor: ColorSet {
         normal: linkColor
         hover: Qt.lighter(linkColor, 1.2)
         down: linkColor
-        disabled: Theme.color.mediumorange1
+        disabled: Theme.color.bluepurple2
     }
 
     backgroundColor: ColorSet {
