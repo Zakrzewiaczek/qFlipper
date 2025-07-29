@@ -84,11 +84,11 @@ Item {
                        deviceInfo.firmware.commit : deviceInfo.firmware.version
                 
                 color: {
-                    if(deviceInfo.firmware.branch === "dev") {
+                    if(deviceInfo.firmware.channel === "development") {
                         return "darkorchid";
-                    } else if(deviceInfo.firmware.branch === "rc") {
+                    } else if(deviceInfo.firmware.channel === "release-candidate") {
                         return "darkorchid";
-                    } else if(deviceInfo.firmware.branch === "release") {
+                    } else if(deviceInfo.firmware.channel === "release") {
                         return Theme.color.lightgreen;
                     } else {
                         return Theme.color.lightred4;

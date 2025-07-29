@@ -352,15 +352,10 @@ const QString &VCPDeviceInfoHelper::branchToChannelName(const QByteArray &branch
     static const auto RELEASE = QStringLiteral("release");
     static const auto CUSTOM = QStringLiteral("custom");
 
-    const QRegExp validVersion(QStringLiteral("^\\d+\\.\\d+\\.\\d+(-rc)?$"));
+    const QRegExp validVersion(QStringLiteral("^mntm-\\d+$"));
 
     if(validVersion.exactMatch(branchName)) {
-        if(validVersion.cap(1).isEmpty()) {
-            return RELEASE;
-        } else {
-            return RELEASE_CANDIDATE;
-        }
-
+        return RELEASE;
     } else if(branchName == QByteArrayLiteral("dev")) {
         return DEVELOPMENT;
     } else {

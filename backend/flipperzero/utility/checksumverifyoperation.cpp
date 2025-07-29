@@ -102,6 +102,8 @@ void ChecksumVerifyOperation::verifyMd5Sums()
         const auto isLastFile = (--filesRemaining == 0);
 
         auto *operation = rpc()->storageMd5Sum(absoluteRemoteFilePath);
+        // Increase timeout for large files (default is 30s, set to 60s)
+        operation->setTimeout(60000);
 
         connect(operation, &AbstractOperation::finished, this, [=]() {
             if(operation->isError()) {

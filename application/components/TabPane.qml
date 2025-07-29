@@ -64,6 +64,7 @@ ColumnLayout {
         implicitHeight: content.height
 
         Canvas {
+            id: canvas
             anchors.fill: parent
 
             onPaint: {
@@ -89,13 +90,12 @@ ColumnLayout {
                 ctx.stroke();
             }
 
-            onVisibleChanged: if(visible) requestPaint();
+            onVisibleChanged: if(visible) canvas.requestPaint();
             
-            // Odświeżaj Canvas podczas animacji
             Connections {
                 target: content
-                function onWidthChanged() { requestPaint(); }
-                function onHeightChanged() { requestPaint(); }
+                function onWidthChanged() { canvas.requestPaint(); }
+                function onHeightChanged() { canvas.requestPaint(); }
             }
         }
 

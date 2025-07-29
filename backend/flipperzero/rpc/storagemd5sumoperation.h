@@ -2,25 +2,27 @@
 
 #include "abstractstorageoperation.h"
 
-namespace Flipper {
-namespace Zero {
-
-class StorageMd5SumOperation : public AbstractStorageOperation
+namespace Flipper
 {
-    Q_OBJECT
+    namespace Zero
+    {
 
-public:
-    StorageMd5SumOperation(uint32_t id, const QByteArray &path, QObject *parent = nullptr);
+        class StorageMd5SumOperation : public AbstractStorageOperation
+        {
+            Q_OBJECT
 
-    const QString description() const override;
-    const QByteArray encodeRequest(ProtobufPluginInterface *encoder) override;
+        public:
+            StorageMd5SumOperation(uint32_t id, const QByteArray &path, QObject *parent = nullptr);
 
-    const QByteArray &md5Sum() const;
+            const QString description() const override;
+            const QByteArray encodeRequest(ProtobufPluginInterface *encoder) override;
 
-private:
-    bool processResponse(QObject *response) override;
-    QByteArray m_md5Sum;
-};
+            const QByteArray &md5Sum() const;
 
-}
+        private:
+            bool processResponse(QObject *response) override;
+            QByteArray m_md5Sum;
+        };
+
+    }
 }
