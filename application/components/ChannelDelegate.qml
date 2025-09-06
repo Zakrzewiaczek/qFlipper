@@ -31,7 +31,7 @@ ItemDelegate {
         }
 
         TextLabel {
-            text: control.text
+            text: control.text.replace(/^pr\d+:/, '')
             color: Theme.color.bluepurple1
             Layout.fillWidth: true
         }

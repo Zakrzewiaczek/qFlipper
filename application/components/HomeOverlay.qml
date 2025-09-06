@@ -420,7 +420,7 @@ AbstractOverlay {
             } else if(Preferences.updateChannel === "release") {
                 str = "Release";
             } else {
-                str = Preferences.updateChannel.replace(/^wip-/, '');
+                str = Preferences.updateChannel.replace(/^pr\d+:/, '');
             }
 
             let splitVersion = Backend.latestFirmwareVersion.number.split("-");
