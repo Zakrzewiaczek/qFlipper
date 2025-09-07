@@ -94,7 +94,6 @@ Item {
                         font.pixelSize: 18
                         font.family: "Share Tech"
 
-                        // color: Theme.color.lightorange2
                         color: Theme.color.bluepurple1
                         elide: Text.ElideMiddle
 

@@ -21,12 +21,17 @@
         <file>components/TabPane.qml</file>
         <file>components/TextLabel.qml</file>
         <file>components/DeviceInfo.qml</file>
+        <file>components/AssetPacksManager.qml</file>
+        <file>components/AssetPackCard.qml</file>
         <file>components/DeviceActions.qml</file>
         <file>components/SmallButton.qml</file>
         <file>assets/gfx/symbolic/trashcan.svg</file>
         <file>assets/gfx/symbolic/update-symbolic.svg</file>
         <file>assets/gfx/symbolic/backup-symbolic.svg</file>
         <file>assets/gfx/symbolic/restore-symbolic.svg</file>
+        <file>assets/gfx/symbolic/asset-pack.svg</file>
+        <file>assets/gfx/symbolic/external-link.svg</file>
+        <file>components/SmallButtonGreen.qml</file>
         <file>components/SmallButtonRed.qml</file>
         <file>components/WindowControls.qml</file>
         <file>assets/gfx/controls/mac/close.svg</file>
@@ -51,11 +56,14 @@
         <file>components/DeviceWidget.qml</file>
         <file>assets/gfx/images/recovery.svg</file>
         <file>assets/gfx/images/default.svg</file>
+        <file>assets/gfx/logos/github.svg</file>
+        <file>assets/gfx/logos/website.svg</file>
         <file>components/ChangelogDialog.qml</file>
         <file>components/ExpandWidget.qml</file>
         <file>assets/gfx/symbolic/arrow-expand.svg</file>
         <file>components/StreamOverlay.qml</file>
         <file>assets/gfx/symbolic/arrow-back.svg</file>
+        <file>assets/gfx/symbolic/arrow-forward.svg</file>
         <file>components/DirectionalKeypad.qml</file>
         <file>components/ImageButton.qml</file>
         <file>assets/gfx/controls/dpad/circle.svg</file>

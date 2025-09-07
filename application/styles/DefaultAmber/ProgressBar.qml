@@ -13,6 +13,10 @@ T.ProgressBar {
     implicitHeight: Math.max(implicitBackgroundHeight + topInset + bottomInset,
                              implicitContentHeight + topPadding + bottomPadding)
 
+    property alias radius: bg.radius
+    property alias fontSize: brightText.font.pixelSize
+    property color barColor: Theme.color.bluepurple1
+
     contentItem: Item {
         id: content
         anchors.fill: parent
@@ -22,7 +26,7 @@ T.ProgressBar {
             id: brightText
             antialiasing: Mitigations.fontRenderingFix
             visible: !control.indeterminate
-            color: Theme.color.bluepurple1
+            color: control.barColor
             text:  Math.round(control.value) + "%"
             anchors.centerIn: parent
 
@@ -30,7 +34,6 @@ T.ProgressBar {
             font.family: "HaxrCorp 4089"
         }
 
-        // Zastępujemy animationText nowym animowanym wskaźnikiem kropek
         Item {
             id: animatedDots
             visible: control.indeterminate
@@ -42,7 +45,7 @@ T.ProgressBar {
             property int activeDot: 0
             property int dotSpacing: 16
             property int dotSize: 12
-            property color dotColor: Theme.color.bluepurple1
+            property color dotColor: control.barColor
 
             Timer {
                 id: dotTimer
@@ -82,7 +85,7 @@ T.ProgressBar {
             id: barFill
             clip: true
             visible: !control.indeterminate
-            color: Theme.color.bluepurple1
+            color: control.barColor
             width: visualPosition * parent.width
             height: parent.height
 
@@ -107,7 +110,7 @@ T.ProgressBar {
         id: bg
         anchors.fill: parent
         color: Theme.color.transparent
-        border.color: Theme.color.bluepurple1
+        border.color: control.barColor
         border.width: 3
         radius: 9
     }

@@ -21,16 +21,17 @@
 #include "inputevent.h"
 #include "asciievent.h"
 #include "logger.h"
+#include "assetpacks.h"
 
 Q_LOGGING_CATEGORY(LOG_APP, "APP")
 
-Application::Application(int &argc, char **argv):
-    QtSingleApplication(QStringLiteral(APP_NAME), argc, argv),
-    m_updateRegistry(globalPrefs->checkApplicationUpdates() ? QStringLiteral("https://update.flipperzero.one/qFlipper/directory.json") : QString()),
-    m_isDeveloperMode(QGuiApplication::queryKeyboardModifiers() & Qt::KeyboardModifier::AltModifier),
-    m_updateStatus(UpdateStatus::NoUpdates)
+Application::Application(int &argc, char **argv) : QtSingleApplication(QStringLiteral(APP_NAME), argc, argv),
+                                                   m_updateRegistry(globalPrefs->checkApplicationUpdates() ? QStringLiteral("https://update.flipperzero.one/qFlipper/directory.json") : QString()),
+                                                   m_isDeveloperMode(QGuiApplication::queryKeyboardModifiers() & Qt::KeyboardModifier::AltModifier),
+                                                   m_updateStatus(UpdateStatus::NoUpdates)
 {
-    if(isRunning()) {
+    if (isRunning())
+    {
         sendMessage(QStringLiteral("IT'S ME."));
         std::exit(0);
         return;
@@ -51,7 +52,8 @@ Application::Application(int &argc, char **argv):
 
     qCInfo(LOG_APP).noquote() << "OS info:" << QSysInfo::prettyProductName() << QSysInfo::productVersion() << QSysInfo::kernelVersion() << "Qt" << qVersion();
 
-    if(m_isDeveloperMode) {
+    if (m_isDeveloperMode)
+    {
         qCCritical(LOG_APP) << "Developer mode is enabled! Please be careful.";
     }
 }
@@ -88,7 +90,8 @@ void Application::selfUpdate()
 
 void Application::checkForUpdates()
 {
-    if(m_updateStatus == UpdateStatus::Checking) {
+    if (m_updateStatus == UpdateStatus::Checking)
+    {
         return;
     }
 
@@ -104,16 +107,20 @@ void Application::onMessageReceived()
 
 void Application::onLatestVersionChanged()
 {
-    if(m_updateRegistry.state() == ApplicationUpdateRegistry::State::Ready && m_updater.canUpdate(m_updateRegistry.latestVersion())) {
+    if (m_updateRegistry.state() == ApplicationUpdateRegistry::State::Ready && m_updater.canUpdate(m_updateRegistry.latestVersion()))
+    {
         setUpdateStatus(UpdateStatus::CanUpdate);
-    } else {
+    }
+    else
+    {
         setUpdateStatus(UpdateStatus::NoUpdates);
     }
 }
 
 void Application::onCurrentDeviceChanged()
 {
-    if(m_fileDialog.isOpen()) {
+    if (m_fileDialog.isOpen())
+    {
         m_fileDialog.close();
     }
 }
@@ -141,12 +148,16 @@ void Application::initCommandOptions()
 
     m_isDeveloperMode |= parser.isSet(developerModeOption);
 
-    if(parser.isSet(usbLogLevelOption)) {
+    if (parser.isSet(usbLogLevelOption))
+    {
         bool canConvert;
         const auto value = parser.value(usbLogLevelOption).toInt(&canConvert);
-        if(!canConvert) {
+        if (!canConvert)
+        {
             qCDebug(LOG_APP) << "USB log level has to be a non-negative number";
-        } else {
+        }
+        else
+        {
             m_backend.deviceRegistry()->setBackendLogLevel(value);
         }
     }
@@ -178,8 +189,10 @@ void Application::initTranslations()
     QTranslator translator;
     const QStringList uiLanguages = QLocale::system().uiLanguages();
 
-    for (const QString &locale : uiLanguages) {
-        if (translator.load(":/i18n/" + QLocale(locale).name())) {
+    for (const QString &locale : uiLanguages)
+    {
+        if (translator.load(":/i18n/" + QLocale(locale).name()))
+        {
             installTranslator(&translator);
             break;
         }
@@ -201,6 +214,11 @@ void Application::initQmlTypes()
     qmlRegisterSingletonInstance("QFlipper", 1, 0, "Backend", &m_backend);
     qmlRegisterSingletonInstance("QFlipper", 1, 0, "App", this);
     qmlRegisterSingletonInstance("QFlipper", 1, 0, "SystemFileDialog", &m_fileDialog);
+
+    // Register AssetPacks singleton
+    if (!globalAssetPacks)
+        globalAssetPacks = new AssetPacks(&m_backend);
+    qmlRegisterSingletonInstance("QFlipper", 1, 0, "AssetPacks", globalAssetPacks);
 }
 
 void Application::initImports()
@@ -222,8 +240,10 @@ void Application::initGUI()
 {
     const QUrl url(QStringLiteral("qrc:/main.qml"));
 
-    const auto onObjectCreated = [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl) {
+    const auto onObjectCreated = [url](QObject *obj, const QUrl &objUrl)
+    {
+        if (!obj && url == objUrl)
+        {
             std::exit(-1);
         }
     };
@@ -237,7 +257,8 @@ void Application::initGUI()
 
 void Application::setUpdateStatus(UpdateStatus newUpdateStatus)
 {
-    if(newUpdateStatus == m_updateStatus) {
+    if (newUpdateStatus == m_updateStatus)
+    {
         return;
     }
 

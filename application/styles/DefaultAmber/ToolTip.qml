@@ -63,6 +63,8 @@ T.ToolTip {
 
     closePolicy: T.Popup.CloseOnEscape | T.Popup.CloseOnPressOutsideParent | T.Popup.CloseOnReleaseOutsideParent
 
+    property color foregroundColor: Theme.color.bluepurple2
+
     enter: Transition {
         PropertyAnimation {
             property: "opacity"; duration: 150; easing.type: Easing.InOutQuad; from: 0; to: 1
@@ -79,7 +81,7 @@ T.ToolTip {
         text: control.text
         font: control.font
         wrapMode: Text.Wrap
-        color: Theme.color.bluepurple2
+        color: foregroundColor
     }
 
     background: Rectangle {

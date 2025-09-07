@@ -12,6 +12,7 @@
 #include <QDebug>
 
 #include "remotefilefetcher.h"
+#include "assetpacks.h"
 
 Q_LOGGING_CATEGORY(CATEGORY_UPDATES, "UPD")
 
@@ -168,15 +169,18 @@ void UpdateRegistry::check()
         } else {
             qCDebug(CATEGORY_UPDATES).noquote() << "Fetched update information from" << m_directoryUrl;
             buf->open(QIODevice::ReadOnly);
-
+            
             fillFromJson(buf->readAll());
             setState(m_channels.isEmpty() ? State::ErrorOccured : State::Ready);
         }
 
+        if (globalAssetPacks)
+            globalAssetPacks->fetchJson(QUrl("https://up.momentum-fw.dev/asset-packs/directory.json"));
+
         fetcher->deleteLater();
         buf->deleteLater();
     });
-
+    
     if(!fetcher->fetch(m_directoryUrl, buf)) {
         qCCritical(CATEGORY_UPDATES).noquote() << "Failed to fetch update information:" << fetcher->errorString();
         setState(State::ErrorOccured);

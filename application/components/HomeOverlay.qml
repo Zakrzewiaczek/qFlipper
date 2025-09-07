@@ -85,12 +85,13 @@ AbstractOverlay {
         anchors.topMargin: -2
 
         currentIndex: tabs.currentIndex
-        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked ? 0.9 : 0)
+        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked || assetPacksTab.checked ? 0.9 : 0)
 
         items: [
             DeviceInfo { id: deviceInfoPane },
             DeviceActions { id: deviceActions },
             FileManager { id: fileManager; messageDialog: messageDialog; confirmationDialog: confirmationDialog; },
+            AssetPacksManager { id: assetPacksPane },
             DeveloperActions { id: developerActions }
         ]
     }
@@ -136,6 +137,20 @@ AbstractOverlay {
 
             ToolTip {
                 text: qsTr("File manager")
+                visible: parent.hovered
+            }
+        }
+
+        TabButton {
+            id: assetPacksTab
+            enabled: Backend.deviceState && !Backend.deviceState.isRecoveryMode
+
+            icon.source: "qrc:/assets/gfx/symbolic/asset-pack.svg"
+            icon.width: 25
+            icon.height: 25
+
+            ToolTip {
+                text: qsTr("Asset Packs Manager")
                 visible: parent.hovered
             }
         }

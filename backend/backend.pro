@@ -38,6 +38,7 @@ SOURCES += \
     flipperzero/rpc/storagelistoperation.cpp \
     flipperzero/rpc/storagemd5sumoperation.cpp \
     flipperzero/rpc/storagemkdiroperation.cpp \
+    assetpacks.cpp \
     flipperzero/rpc/storagereadoperation.cpp \
     flipperzero/rpc/storageremoveoperation.cpp \
     flipperzero/rpc/storagerenameoperation.cpp \
@@ -119,6 +120,7 @@ HEADERS += \
     abstractprotobufmessage.h \
     abstractserialoperation.h \
     applicationbackend.h \
+    assetpacks.h \
     backenderror.h \
     deviceregistry.h \
     failable.h \
