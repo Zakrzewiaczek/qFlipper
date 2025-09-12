@@ -159,6 +159,13 @@ const QByteArray ProtobufPlugin::storageMd5Sum(uint32_t id, const QByteArray &pa
     return StorageMd5SumRequest(id, path).encode();
 }
 
+const QByteArray ProtobufPlugin::storageTarExtract(uint32_t id, const QByteArray &tarPath, const QByteArray &outPath) const
+{
+    // Use dedicated request helper
+    StorageTarExtractRequest req(id, tarPath, outPath);
+    return req.encode();
+}
+
 const QByteArray ProtobufPlugin::propertyGet(uint32_t id, const QByteArray &key) const
 {
     return PropertyGetRequest(id, key).encode();

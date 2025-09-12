@@ -109,6 +109,7 @@ SOURCES += \
     tarziparchive.cpp \
     tarzipcompressor.cpp \
     tarzipuncompressor.cpp \
+    zipuncompressor.cpp \
     tempdirectories.cpp \
     updateregistry.cpp \
     versioninfo.cpp
@@ -226,6 +227,7 @@ HEADERS += \
     tarziparchive.h \
     tarzipcompressor.h \
     tarzipuncompressor.h \
+    zipuncompressor.h \
     tempdirectories.h \
     updateregistry.h \
     versioninfo.h

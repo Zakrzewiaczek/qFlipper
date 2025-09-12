@@ -45,6 +45,8 @@ public:
     virtual const QByteArray storageRead(uint32_t id, const QByteArray &path) const = 0;
     virtual const QByteArray storageWrite(uint32_t id, const QByteArray &path, const QByteArray &data, bool hasNext) const = 0;
     virtual const QByteArray storageMd5Sum(uint32_t id, const QByteArray &path) const = 0;
+    // Extract a tar archive present on device: tar_path -> out_path
+    virtual const QByteArray storageTarExtract(uint32_t id, const QByteArray &tarPath, const QByteArray &outPath) const = 0;
 
     virtual const QByteArray propertyGet(uint32_t id, const QByteArray &key) const = 0;
 

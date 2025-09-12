@@ -32,6 +32,7 @@ class StorageWriteOperation;
 class StorageRenameOperation;
 class StorageRemoveOperation;
 class StorageMd5SumOperation;
+class StorageTarExtractOperation;
 
 class GuiStartScreenStreamOperation;
 class GuiStopScreenStreamOperation;
@@ -87,6 +88,7 @@ public:
     StorageReadOperation *storageRead(const QByteArray &path, QIODevice *file);
     StorageWriteOperation *storageWrite(const QByteArray &path, QIODevice *file);
     StorageMd5SumOperation *storageMd5Sum(const QByteArray &path);
+    StorageTarExtractOperation *storageTarExtract(const QByteArray &tarPath, const QByteArray &outPath);
 
     GuiStartScreenStreamOperation *guiStartScreenStream();
     GuiStopScreenStreamOperation *guiStopScreenStream();

@@ -44,6 +44,7 @@ public:
     const QByteArray storageRead(uint32_t id, const QByteArray &path) const override;
     const QByteArray storageWrite(uint32_t id, const QByteArray &path, const QByteArray &data, bool hasNext) const override;
     const QByteArray storageMd5Sum(uint32_t id, const QByteArray &path) const override;
+    const QByteArray storageTarExtract(uint32_t id, const QByteArray &tarPath, const QByteArray &outPath) const override;
 
     const QByteArray propertyGet(uint32_t id, const QByteArray &key) const override;
 

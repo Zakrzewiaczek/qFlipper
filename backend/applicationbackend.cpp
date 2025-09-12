@@ -28,6 +28,10 @@
 Q_LOGGING_CATEGORY(LOG_BACKEND, "BKD")
 Q_DECLARE_METATYPE(QAbstractListModel*)
 
+// Forward declaration to avoid namespace conflicts
+class AssetPacks;
+extern AssetPacks *globalAssetPacks;
+
 using namespace Flipper;
 using namespace Zero;
 
@@ -250,6 +254,12 @@ void ApplicationBackend::onCurrentDeviceChanged()
 
         connect(deviceState(), &DeviceState::deviceInfoChanged, this, &ApplicationBackend::onDeviceInfoChanged);
         connect(deviceState(), &DeviceState::isPersistentChanged, this, &ApplicationBackend::onDeviceInfoChanged);
+        
+        // Check for installed asset packs when device connects
+        if (globalAssetPacks) {
+            // Use QMetaObject to call the method to avoid undefined type issues
+            QMetaObject::invokeMethod(reinterpret_cast<QObject*>(globalAssetPacks), "checkInstalledPacks", Qt::QueuedConnection);
+        }
 
         onDeviceInfoChanged();
 

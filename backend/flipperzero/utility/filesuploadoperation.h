@@ -34,11 +34,15 @@ private slots:
 private:
     void readFileList();
     void writeFiles();
+    void processNextFile();
 
     QByteArray m_remotePath;
     QList<QUrl> m_urlList;
     QList<FileListElement> m_fileList;
     qint64 m_totalSize;
+    double m_progressBase;
+    int m_currentFileIndex;
+    int m_totalFiles;
 };
 
 }

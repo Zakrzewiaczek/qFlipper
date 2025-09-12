@@ -4,6 +4,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QMap>
+#include <QTemporaryDir>
 
 namespace Flipper
 {
@@ -46,6 +47,19 @@ public:
     Q_INVOKABLE void fetchJson(const QUrl &url);
     Q_INVOKABLE void downloadAndSaveFile(const QString &fileUrl);
     Q_INVOKABLE void performDownload(const QString &fileUrl, const QString &savePath);
+    
+    // Asset pack installation and management
+    Q_INVOKABLE void installAssetPack(const QString &packId, const QString &packUrl);
+    Q_INVOKABLE void uninstallAssetPack(const QString &packId);
+    Q_INVOKABLE void checkInstalledPacks();
+    Q_INVOKABLE void updateAssetPackStatus(const QString &packId, bool isInstalled);
+
+private:
+    void updateAllPackStatuses(bool isInstalled);
+    void createAssetPackManifest(const QString &packId);
+
+private:
+    void processExtractedFiles(const QString &packId, const QString &extractPath, QTemporaryDir *tempDir);
 
     // QML property accessors
     bool errorOccured() const { return m_errorOccured; }
@@ -78,6 +92,12 @@ signals:
     void downloadStarted();
     void downloadFinished(bool success, const QString &message, const QString &fileUrl);
     void requestSaveFile(const QString &fileUrl, const QString &suggestedFileName);
+    
+    // Asset pack installation signals
+    void installStarted(const QString &packId);
+    void installProgress(const QString &packId, int progress);
+    void installFinished(const QString &packId, bool success, const QString &message);
+    void uninstallFinished(const QString &packId, bool success, const QString &message);
 
 private slots:
     void onReplyFinished();

@@ -68,3 +68,19 @@ class StorageMd5SumRequest : public AbstractStorageRequest
 public:
     StorageMd5SumRequest(uint32_t id, const QByteArray &path);
 };
+
+class StorageTarExtractRequest : public MainRequest
+{
+public:
+    StorageTarExtractRequest(uint32_t id, const QByteArray &tarPath, const QByteArray &outPath)
+        : MainRequest(id, PB_Main_storage_tar_extract_request_tag), m_tar(tarPath), m_out(outPath)
+    {
+        m_message.content.storage_tar_extract_request = PB_Storage_TarExtractRequest_init_default;
+        m_message.content.storage_tar_extract_request.tar_path = (char*)m_tar.data();
+        m_message.content.storage_tar_extract_request.out_path = (char*)m_out.data();
+    }
+
+private:
+    QByteArray m_tar;
+    QByteArray m_out;
+};

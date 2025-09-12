@@ -80,16 +80,47 @@ Item {
             }
         }
         
-        function onUninstallFinished(success, message, packName) {
-            if (packName !== control.title) {
+        function onInstallStarted(packId) {
+            if (packId !== control.packId) {
                 return;
             }
             
-            control.uninstalling = false
+            control.installing = true;
+        }
+        
+        function onInstallProgress(packId, progress) {
+            if (packId !== control.packId) {
+                return;
+            }
+            
+            control.progress = progress;
+        }
+        
+        function onInstallFinished(packId, success, message) {
+            if (packId !== control.packId) {
+                return;
+            }
+            
+            control.installing = false;
             if (success) {
-                console.log("Uninstall completed for", control.title)
+                // Do not mutate isInstalled here; let backend status update drive UI to avoid races
+                console.log("Install completed for", control.title);
             } else {
-                console.error("Uninstall failed for", control.title, ":", message)
+                console.error("Install failed for", control.title, ":", message);
+            }
+        }
+        
+        function onUninstallFinished(packId, success, message) {
+            if (packId !== control.packId) {
+                return;
+            }
+            
+            control.uninstalling = false;
+            if (success) {
+                control.isInstalled = false;
+                console.log("Uninstall completed for", control.title);
+            } else {
+                console.error("Uninstall failed for", control.title, ":", message);
             }
         }
     }
@@ -460,12 +491,12 @@ Item {
             }
 
             onClicked: {
-                // if (AssetPacks) {
-                //     control.isDownloading = true;
-                //     AssetPacks.downloadAndSaveFile(control.zipUrl);
-                // } else {
-                //     console.error("AssetPacks is null or undefined");
-                // }
+                if (AssetPacks) {
+                    control.isDownloading = true;
+                    AssetPacks.downloadAndSaveFile(control.zipUrl);
+                } else {
+                    console.error("AssetPacks is null or undefined");
+                }
             }
         }
 
@@ -491,6 +522,16 @@ Item {
                 }
 
                 visible: !installing && !uninstalling && !needsUpdate
+                
+                onClicked: {
+                    if (AssetPacks) {
+                        control.installing = true;
+                        // Use zipUrl for installation (zip format)
+                        AssetPacks.installAssetPack(control.packId, control.zipUrl);
+                    } else {
+                        console.error("AssetPacks is null or undefined");
+                    }
+                }
             }
             SmallButtonGreen {
                 id: updateButton
@@ -510,6 +551,16 @@ Item {
                 }
 
                 visible: !installing && !uninstalling && needsUpdate
+                
+                onClicked: {
+                    if (AssetPacks) {
+                        control.installing = true;
+                        // Use zipUrl for installation (zip format)
+                        AssetPacks.installAssetPack(control.packId, control.zipUrl);
+                    } else {
+                        console.error("AssetPacks is null or undefined");
+                    }
+                }
             }
             SmallButtonRed {
                 id: uninstallButton
@@ -528,12 +579,12 @@ Item {
                 }
 
                 onClicked: {
-                    // if (AssetPacks) {
-                    //     control.uninstalling = true;
-                    //     AssetPacks.uninstallAssetPack(control.packId);
-                    // } else {
-                    //     console.error("AssetPacks is null or undefined");
-                    // }
+                    if (AssetPacks) {
+                        control.uninstalling = true;
+                        AssetPacks.uninstallAssetPack(control.packId);
+                    } else {
+                        console.error("AssetPacks is null or undefined");
+                    }
                 }
 
                 visible: (isInstalled || needsUpdate) && !installing && !uninstalling
