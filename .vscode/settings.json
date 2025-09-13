@@ -7,5 +7,6 @@
         "utility": "cpp",
         "xstring": "cpp",
         "atomic": "cpp"
-    }
+    },
+    "cmake.ignoreCMakeListsMissing": true
 }

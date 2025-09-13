@@ -149,6 +149,8 @@ AbstractOverlay {
             icon.width: 25
             icon.height: 25
 
+            onCheckedChanged: if(checked) AssetPacks.refreshInstalledPacks()
+
             ToolTip {
                 text: qsTr("Asset Packs Manager")
                 visible: parent.hovered

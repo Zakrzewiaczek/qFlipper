@@ -4,6 +4,8 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QMap>
+#include <QStringList>
+#include <QQueue>
 #include <QTemporaryDir>
 
 namespace Flipper
@@ -19,6 +21,16 @@ class ApplicationBackend;
 class AssetPacks : public QObject
 {
     Q_OBJECT
+
+public:
+    // Upload queue system
+    struct QueuedUpload {
+        QString packId;
+        QString extractPath;
+        QStringList rootFolderNames;
+        QString flipperParentPath;
+        QTemporaryDir *tempDir;
+    };
     Q_PROPERTY(bool errorOccured READ errorOccured NOTIFY errorOccuredChanged)
     Q_PROPERTY(int count READ count NOTIFY dataChanged)
     Q_PROPERTY(QStringList idsList READ idsList NOTIFY dataChanged)
@@ -53,10 +65,15 @@ public:
     Q_INVOKABLE void uninstallAssetPack(const QString &packId);
     Q_INVOKABLE void checkInstalledPacks();
     Q_INVOKABLE void updateAssetPackStatus(const QString &packId, bool isInstalled);
+    Q_INVOKABLE void refreshInstalledPacks();
+    Q_INVOKABLE void forceRefreshDetection();
 
 private:
     void updateAllPackStatuses(bool isInstalled);
-    void createAssetPackManifest(const QString &packId);
+    void updatePackStatusesFromInstalledList(const QStringList &installedPacks);
+    void createAssetPackManifest(const QString &packId, const QString &actualFolderName);
+    void processUploadQueue();
+    void startUpload(const QueuedUpload &upload);
 
 private:
     void processExtractedFiles(const QString &packId, const QString &extractPath, QTemporaryDir *tempDir);
@@ -98,10 +115,12 @@ signals:
     void installProgress(const QString &packId, int progress);
     void installFinished(const QString &packId, bool success, const QString &message);
     void uninstallFinished(const QString &packId, bool success, const QString &message);
+    void manifestCreated(const QString &packId);
 
 private slots:
     void onReplyFinished();
     void onDownloadReplyFinished();
+    void onManifestCreated(const QString &packId);
 
 private:
     void parseJson(const QByteArray &data);
@@ -134,6 +153,12 @@ private:
     QStringList m_addedList;
     // Helper for previewUrls (flattened)
     QStringList m_previewUrlsFlat;
+    // Map to store actual folder names for each pack ID
+    QMap<QString, QString> m_extractedFolderNames;
+    
+    // Upload queue system
+    QQueue<QueuedUpload> m_uploadQueue;
+    bool m_isUploading = false;
 };
 
 extern AssetPacks *globalAssetPacks;

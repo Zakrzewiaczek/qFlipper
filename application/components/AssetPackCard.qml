@@ -54,9 +54,19 @@ Item {
                     control.pendingDownloadUrl = ""
                 }
                 SystemFileDialog.accepted.disconnect(acceptedConnection)
+                SystemFileDialog.finished.disconnect(finishedConnection)
+            }
+            
+            var finishedConnection = function() {
+                // Reset downloading state when dialog is closed (either accepted or cancelled)
+                control.isDownloading = false
+                control.pendingDownloadUrl = ""
+                SystemFileDialog.accepted.disconnect(acceptedConnection)
+                SystemFileDialog.finished.disconnect(finishedConnection)
             }
             
             SystemFileDialog.accepted.connect(acceptedConnection)
+            SystemFileDialog.finished.connect(finishedConnection)
             
             SystemFileDialog.beginSaveFile(
                 SystemFileDialog.DownloadsLocation,
@@ -117,7 +127,6 @@ Item {
             
             control.uninstalling = false;
             if (success) {
-                control.isInstalled = false;
                 console.log("Uninstall completed for", control.title);
             } else {
                 console.error("Uninstall failed for", control.title, ":", message);

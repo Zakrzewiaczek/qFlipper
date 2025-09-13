@@ -32,6 +32,7 @@ AssetPacks *globalAssetPacks = nullptr;
 #include "flipperzero/assetmanifest.h"
 #include "flipperzero/rpc/storagereadoperation.h"
 #include "flipperzero/rpc/storagewriteoperation.h"
+#include "flipperzero/rpc/storagestatoperation.h"
 #include "tarzipuncompressor.h"
 #include "abstractoperation.h"
 
@@ -40,6 +41,8 @@ Q_DECLARE_LOGGING_CATEGORY(CATEGORY_UPDATES)
 AssetPacks::AssetPacks(ApplicationBackend *backend, QObject *parent)
     : QObject(parent), m_backend(backend)
 {
+    // Connect the manifestCreated signal to trigger detection refresh
+    connect(this, &AssetPacks::manifestCreated, this, &AssetPacks::onManifestCreated);
 }
 
 void AssetPacks::fetchJson(const QUrl &url)
@@ -227,7 +230,7 @@ void AssetPacks::parseJson(const QByteArray &data)
 
         // Extract files information
         QJsonArray filesArray = packObj.value("files").toArray();
-        QString zipUrl, targzUrl, targzSha256;
+        QString zipUrl, targzUrl, targzSha256, zipSha256;
         for (const QJsonValue &fileValue : filesArray)
         {
             QJsonObject fileObj = fileValue.toObject();
@@ -235,6 +238,8 @@ void AssetPacks::parseJson(const QByteArray &data)
             if (type == "pack_zip")
             {
                 zipUrl = fileObj.value("url").toString();
+                // Some feeds may provide sha256 for zip instead of targz
+                zipSha256 = fileObj.value("sha256").toString();
             }
             else if (type == "pack_targz")
             {
@@ -244,7 +249,8 @@ void AssetPacks::parseJson(const QByteArray &data)
         }
         m_zipUrlsList.append(zipUrl);
         m_targzUrlsList.append(targzUrl);
-        m_targzSha256List.append(targzSha256);
+        // Prefer targz sha if present, otherwise fall back to zip sha
+        m_targzSha256List.append(!targzSha256.isEmpty() ? targzSha256 : zipSha256);
 
         // Extract stats information
         QJsonObject statsObj = packObj.value("stats").toObject();
@@ -299,6 +305,15 @@ void AssetPacks::parseJson(const QByteArray &data)
 
     emit jsonFetched(data);
     emit dataChanged();
+    
+    // Check for installed packs after loading the pack list
+    // This ensures we have the pack IDs available for matching
+    if (m_backend && m_backend->device()) {
+        QTimer::singleShot(500, this, [this]() {
+            qDebug() << "[MANIFEST] Checking installed packs after JSON load";
+            checkInstalledPacks();
+        });
+    }
 }
 
 void AssetPacks::clearData()
@@ -459,10 +474,16 @@ void AssetPacks::processExtractedFiles(const QString &packId, const QString &ext
         return;
     }
 
-    QString rootFolderName = entries.first();
+    // Support multiple top-level folders inside the archive
+    QStringList rootFolderNames = entries;
+    
+    // Store the first actual folder name for backwards compatibility/manifest
+    if (!rootFolderNames.isEmpty()) {
+        m_extractedFolderNames[packId] = rootFolderNames.first();
+    }
     // Sanity-check: ensure there are files inside the root folder
     int fileCount = 0;
-    {
+    for (const QString &rootFolderName : rootFolderNames) {
         const QString rootPath = QDir(extractPath).filePath(rootFolderName);
         QDirIterator it(rootPath, QDir::Files, QDirIterator::Subdirectories);
         while (it.hasNext()) { it.next(); ++fileCount; }
@@ -474,18 +495,17 @@ void AssetPacks::processExtractedFiles(const QString &packId, const QString &ext
         return;
     }
     QString flipperParentPath = QString("/ext/asset_packs");
-    QString flipperPath = QString("%1/%2").arg(flipperParentPath, rootFolderName);
-    qDebug() << "Using root folder:" << rootFolderName << "Target path (parent):" << flipperParentPath;
+    qDebug() << "Using root folders:" << rootFolderNames << "Target path (parent):" << flipperParentPath;
     // Ensure screen streaming is stopped before heavy RPC traffic
     if (m_backend) {
         m_backend->stopFullScreenStreaming();
     }
     
-    // Create the directory on Flipper
-    qDebug() << "Creating directory on Flipper:" << flipperPath;
-    auto *mkdirOp = m_backend->device()->rpc()->storageMkdir(flipperPath.toUtf8());
+    // Ensure the parent directory exists on Flipper (top-level asset_packs)
+    qDebug() << "Ensuring parent directory exists on Flipper:" << flipperParentPath;
+    auto *mkdirOp = m_backend->device()->rpc()->storageMkdir(flipperParentPath.toUtf8());
     connect(mkdirOp, &AbstractOperation::finished, this, [=]() {
-        qDebug() << "Mkdir operation finished for:" << flipperPath;
+        qDebug() << "Mkdir operation finished for parent:" << flipperParentPath;
         if (mkdirOp->isError()) {
             qDebug() << "Mkdir error:" << mkdirOp->errorString();
             emit installFinished(packId, false, QString("Failed to create directory: %1").arg(mkdirOp->errorString()));
@@ -498,134 +518,24 @@ void AssetPacks::processExtractedFiles(const QString &packId, const QString &ext
             return;
         }
 
-        qDebug() << "Directory created successfully, preparing file upload";
-        // Upload the entire root folder; utility will recurse and preserve structure
-        const QString localRoot = QDir(extractPath).filePath(rootFolderName);
+        qDebug() << "Directory created successfully, queueing upload";
         
-        // Debug: Check what's actually in the extracted directory
-        QDir rootDir(localRoot);
-        qDebug() << "[ASSET DEBUG] Checking contents of:" << localRoot;
-        qDebug() << "[ASSET DEBUG] Directory exists:" << rootDir.exists();
-        qDebug() << "[ASSET DEBUG] Directory is readable:" << rootDir.isReadable();
+        // Create upload queue entry
+        QueuedUpload upload;
+        upload.packId = packId;
+        upload.extractPath = extractPath;
+        upload.rootFolderNames = rootFolderNames;
+        upload.flipperParentPath = flipperParentPath;
+        upload.tempDir = tempDir;
         
-        QStringList entries = rootDir.entryList(QDir::AllEntries | QDir::NoDotAndDotDot);
-        qDebug() << "[ASSET DEBUG] Found entries in root directory:" << entries;
+        // Add to queue
+        m_uploadQueue.enqueue(upload);
+        qDebug() << "[QUEUE] Added pack to upload queue:" << packId << "Queue size:" << m_uploadQueue.size();
         
-        // Count files recursively
-        int fileCount = 0;
-        QDirIterator it(localRoot, QDir::Files, QDirIterator::Subdirectories);
-        while (it.hasNext()) {
-            it.next();
-            fileCount++;
+        // Process queue if not already uploading
+        if (!m_isUploading) {
+            processUploadQueue();
         }
-        qDebug() << "[ASSET DEBUG] Total files found recursively:" << fileCount;
-        
-        // List all files with their paths
-        QDirIterator fileIt(localRoot, QDir::Files, QDirIterator::Subdirectories);
-        while (fileIt.hasNext()) {
-            QString filePath = fileIt.next();
-            QFileInfo fileInfo(filePath);
-            qDebug() << "[ASSET DEBUG] Found file:" << filePath << "Size:" << fileInfo.size();
-        }
-        
-        // Pass the root directory URL - FilesUploadOperation will handle directory traversal
-        QList<QUrl> fileUrls;
-        fileUrls.append(QUrl::fromLocalFile(localRoot));
-        qDebug() << "[ASSET DEBUG] Queueing root directory for upload:" << localRoot;
-        
-        // Disable virtual display/screen stream during upload to avoid RPC/UI races
-        if (m_backend && m_backend->device() && m_backend->device()->deviceState()) {
-            m_backend->device()->deviceState()->setAllowVirtualDisplay(false);
-        }
-        if (m_backend) {
-            m_backend->stopFullScreenStreaming();
-        }
-        qDebug() << "[UPLOAD START] Starting file upload operation";
-        Flipper::Zero::FilesUploadOperation *uploadOp = m_backend->device()->utility()->uploadFiles(fileUrls, flipperParentPath.toUtf8());
-        
-        // Add a timer to track upload progress
-        QTimer *progressTimer = new QTimer(this);
-        QPointer<QTimer> progressTimerGuard(progressTimer);
-        QPointer<AbstractOperation> uploadOpGuard(uploadOp);
-        progressTimer->setInterval(1000); // Check every second
-        connect(progressTimer, &QTimer::timeout, this, [=]() {
-            if (!uploadOpGuard || !progressTimerGuard) return;
-            qDebug() << "[TIMER] Upload still running, progress:" << uploadOpGuard->progress();
-        });
-        progressTimer->start();
-        
-        QMetaObject::Connection progressConn = connect(uploadOp, &AbstractOperation::progressChanged, this, [=]() {
-            try {
-                int progress = qBound(50, 50 + static_cast<int>(uploadOp->progress() / 2), 100);
-                qDebug() << "[PROGRESS] Upload progress:" << uploadOp->progress() << "-> UI progress:" << progress;
-                emit installProgress(packId, progress);
-            } catch (...) {
-                qDebug() << "[PROGRESS] Exception in progress handler";
-            }
-        });
-        
-        // Error handling is done in the finished signal handler
-        
-        // Force initial progress update
-        emit installProgress(packId, 50);
-        
-        connect(uploadOp, &AbstractOperation::finished, this, [=]() {
-            try {
-                qDebug() << "[FINISH] Upload operation finished for pack:" << packId;
-                if (uploadOp->isError()) {
-                    qDebug() << "[FINISH] Upload error:" << uploadOp->errorString();
-                    emit installFinished(packId, false, QString("Upload failed: %1").arg(uploadOp->errorString()));
-                } else {
-                    qDebug() << "[FINISH] Upload successful for pack:" << packId;
-                    emit installProgress(packId, 100);
-                    emit installFinished(packId, true, "Asset pack installed successfully");
-                    
-                     // Create asset pack manifest file for detection
-                     createAssetPackManifest(packId);
-                     
-                     // Update asset pack status to show as installed
-                     updateAssetPackStatus(packId, true);
-                     
-                     // Also refresh the manifest to ensure accurate detection
-                     QTimer::singleShot(1000, this, [this]() {
-                         checkInstalledPacks();
-                     });
-                }
-                
-                 // Clean up progress timer safely
-                 if (progressTimerGuard) {
-                     progressTimerGuard->stop();
-                     progressTimerGuard->deleteLater();
-                 }
-                
-                 // Re-enable virtual display after upload completes
-                 // Use a longer delay to avoid race conditions that cause crashes
-                 QTimer::singleShot(2000, this, [this]() {
-                     try {
-                         if (m_backend && m_backend->device() && m_backend->device()->deviceState()) {
-                             m_backend->device()->deviceState()->setAllowVirtualDisplay(true);
-                         }
-                         // Don't restart screen streaming immediately to avoid crashes
-                         // Let the user manually restart it if needed
-                         qDebug() << "[FINISH] Virtual display re-enabled, screen streaming can be manually restarted";
-                     } catch (...) {
-                         qDebug() << "[FINISH] Exception while re-enabling virtual display";
-                     }
-                 });
-                 
-                
-                // Safely delete temp directory using deferred deletion to avoid race conditions
-                QTimer::singleShot(3000, [tempDir]() {
-                    if (tempDir) {
-                        delete tempDir;
-                    }
-                });
-            } catch (...) {
-                qDebug() << "[FINISH] Exception in upload finished handler - skipping cleanup";
-            }
-        });
-        
-        uploadOp->start();
     });
 }
 
@@ -636,60 +546,128 @@ void AssetPacks::uninstallAssetPack(const QString &packId)
         return;
     }
 
-    QString flipperPath = QString("/ext/asset_packs/%1").arg(packId);
-    
-    // Remove the directory recursively
-    auto *removeOp = m_backend->device()->rpc()->storageRemove(flipperPath.toUtf8(), true);
-    connect(removeOp, &AbstractOperation::finished, this, [=]() {
-        if (removeOp->isError()) {
-            emit uninstallFinished(packId, false, QString("Uninstall failed: %1").arg(removeOp->errorString()));
+    // First read the manifest to get all actual folder names
+    QString manifestPath = QString("/ext/asset_packs/.manifests/%1.pack").arg(packId);
+    QBuffer *buffer = new QBuffer(this);
+    auto *readOp = m_backend->device()->rpc()->storageRead(manifestPath.toUtf8(), buffer);
+    connect(readOp, &AbstractOperation::finished, this, [=]() {
+        QStringList folderNames; // Default filled below if manifest missing
+        
+        if (!readOp->isError()) {
+            // Parse the manifest to get the folder names
+            QByteArray manifestData = buffer->data();
+            QJsonParseError parseError;
+            QJsonDocument doc = QJsonDocument::fromJson(manifestData, &parseError);
+            
+            if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
+                QJsonObject manifestObj = doc.object();
+                QJsonArray foldersArray = manifestObj.value("folders").toArray();
+                for (const QJsonValue &v : foldersArray) {
+                    const QString name = v.toString();
+                    if (!name.isEmpty()) folderNames.append(name);
+                }
+                qDebug() << "[UNINSTALL] Folders from manifest:" << folderNames;
+            } else {
+                qDebug() << "[UNINSTALL] Failed to parse manifest, using packId as fallback";
+            }
         } else {
-        // Also remove the manifest file
-        QString manifestPath = QString("/ext/asset_packs/.manifests/%1.pack").arg(packId);
+            qDebug() << "[UNINSTALL] Failed to read manifest, using packId as fallback:" << readOp->errorString();
+        }
+
+        if (folderNames.isEmpty()) {
+            folderNames.append(packId);
+        }
+
+        // Remove all listed folders recursively, then remove manifest
+        struct RemoveContext { qsizetype remaining; bool hadError; QString firstError; };
+        RemoveContext *ctx = new RemoveContext{ folderNames.size(), false, QString() };
+
+        auto onAllRemoved = [=]() {
+            // Remove the manifest file last
             auto *manifestRemoveOp = m_backend->device()->rpc()->storageRemove(manifestPath.toUtf8());
             connect(manifestRemoveOp, &AbstractOperation::finished, this, [=]() {
                 manifestRemoveOp->deleteLater();
-                emit uninstallFinished(packId, true, "Asset pack uninstalled successfully");
+                emit uninstallFinished(packId, !ctx->hadError, ctx->hadError ? ctx->firstError : QStringLiteral("Asset pack uninstalled successfully"));
                 updateAssetPackStatus(packId, false);
+                QTimer::singleShot(500, this, [this]() { checkInstalledPacks(); });
+                delete ctx;
+            });
+        };
+
+        for (const QString &folder : folderNames) {
+            const QString flipperPath = QString("/ext/asset_packs/%1").arg(folder);
+            qDebug() << "[UNINSTALL] Removing folder:" << flipperPath;
+            auto *removeOp = m_backend->device()->rpc()->storageRemove(flipperPath.toUtf8(), true);
+            connect(removeOp, &AbstractOperation::finished, this, [=]() {
+                if (removeOp->isError()) {
+                    ctx->hadError = true;
+                    if (ctx->firstError.isEmpty()) ctx->firstError = QString("Uninstall failed: %1").arg(removeOp->errorString());
+                }
+                removeOp->deleteLater();
+                ctx->remaining -= 1;
+                if (ctx->remaining == 0) onAllRemoved();
             });
         }
-        removeOp->deleteLater();
+
+        readOp->deleteLater();
+        buffer->deleteLater();
     });
 }
 
-void AssetPacks::createAssetPackManifest(const QString &packId)
+void AssetPacks::createAssetPackManifest(const QString &packId, const QString &actualFolderName)
 {
     if (!m_backend || !m_backend->device()) {
         return;
     }
 
-    qDebug() << "[MANIFEST] Creating asset pack manifest for:" << packId;
-    
-        // Create .manifests directory inside asset_packs if it doesn't exist
-        auto *mkdirOp = m_backend->device()->rpc()->storageMkdir("/ext/asset_packs/.manifests");
+    // Resolve folders list from JSON if available; fallback to provided folder name
+    QStringList foldersForManifest;
+    int packIndex = m_idsList.indexOf(packId);
+    if (packIndex >= 0 && packIndex < m_foldersList.size() && !m_foldersList[packIndex].isEmpty()) {
+        foldersForManifest = m_foldersList[packIndex];
+    } else if (!actualFolderName.isEmpty()) {
+        foldersForManifest = QStringList() << actualFolderName;
+    }
+
+    // Resolve sha256 from JSON if available; fallback to placeholder
+    QString sha256Value = QString("placeholder_sha256_for_%1").arg(packId);
+    if (packIndex >= 0 && packIndex < m_targzSha256List.size() && !m_targzSha256List[packIndex].isEmpty()) {
+        sha256Value = m_targzSha256List[packIndex];
+    }
+
+    qDebug() << "[MANIFEST] Creating asset pack manifest for:" << packId
+             << "folders:" << foldersForManifest << "sha256:" << sha256Value;
+
+    // Create .manifests directory inside asset_packs if it doesn't exist
+    auto *mkdirOp = m_backend->device()->rpc()->storageMkdir("/ext/asset_packs/.manifests");
     connect(mkdirOp, &AbstractOperation::finished, this, [=]() {
         mkdirOp->deleteLater();
-        
+
         // Create the pack manifest file with proper JSON structure
         QString manifestFileName = QString("/ext/asset_packs/.manifests/%1.pack").arg(packId);
-        
-        // Create JSON structure similar to the example you provided
+
         QJsonObject manifestJson;
-        manifestJson["sha256"] = QString("placeholder_sha256_for_%1").arg(packId);
-        manifestJson["folders"] = QJsonArray::fromStringList(QStringList() << packId);
-        
+        manifestJson["sha256"] = sha256Value;
+        manifestJson["folders"] = QJsonArray::fromStringList(foldersForManifest);
+
         QJsonDocument doc(manifestJson);
         QString manifestContent = doc.toJson(QJsonDocument::Compact);
-        
+
         QBuffer *buffer = new QBuffer(this);
         buffer->setData(manifestContent.toUtf8());
-        
+
         auto *writeOp = m_backend->device()->rpc()->storageWrite(manifestFileName.toUtf8(), buffer);
         connect(writeOp, &AbstractOperation::finished, this, [=]() {
             if (writeOp->isError()) {
                 qDebug() << "[MANIFEST] Failed to create manifest file:" << writeOp->errorString();
             } else {
                 qDebug() << "[MANIFEST] Successfully created manifest file:" << manifestFileName;
+
+                // Immediately update the status to show as installed
+                updateAssetPackStatus(packId, true);
+
+                // Emit signal that manifest was created successfully
+                emit manifestCreated(packId);
             }
             writeOp->deleteLater();
             buffer->deleteLater();
@@ -700,6 +678,7 @@ void AssetPacks::createAssetPackManifest(const QString &packId)
 void AssetPacks::checkInstalledPacks()
 {
     if (!m_backend || !m_backend->device()) {
+        qDebug() << "[MANIFEST] Cannot check installed packs - no device connected";
         return;
     }
 
@@ -712,32 +691,46 @@ void AssetPacks::checkInstalledPacks()
             qDebug() << "[MANIFEST] Failed to list manifest directory:" << listOp->errorString();
             // If manifest directory doesn't exist, assume no packs are installed
             updateAllPackStatuses(false);
+            listOp->deleteLater();
             return;
         }
 
-        QStringList installedPacks;
         const auto &files = listOp->files();
+        qDebug() << "[MANIFEST] Found" << files.size() << "files in manifest directory";
         
+        // Collect all manifest files
+        QStringList manifestFiles;
         for (const auto &fileInfo : files) {
+            qDebug() << "[MANIFEST] Checking file:" << fileInfo.name << "type:" << static_cast<int>(fileInfo.type);
             if (fileInfo.type == FileType::RegularFile && fileInfo.name.endsWith(".pack")) {
-                // Extract pack ID from filename like "akira.pack"
-                QString packId = fileInfo.name;
-                packId.chop(5); // Remove ".pack"
-                installedPacks.append(packId);
-                qDebug() << "[MANIFEST] Found installed pack:" << packId;
+                manifestFiles.append(fileInfo.name);
+                qDebug() << "[MANIFEST] Added manifest file:" << fileInfo.name;
             }
         }
-
-        // Update status for all known packs
-        for (int i = 0; i < m_idsList.size(); ++i) {
-            QString packId = m_idsList[i];
-            bool isInstalled = installedPacks.contains(packId);
-            m_isInstalledList[i] = isInstalled;
-            qDebug() << "[MANIFEST] Pack" << packId << "installed:" << isInstalled;
+        
+        qDebug() << "[MANIFEST] Found" << manifestFiles.size() << "manifest files:" << manifestFiles;
+        
+        if (manifestFiles.isEmpty()) {
+            qDebug() << "[MANIFEST] No manifest files found - marking all packs as not installed";
+            updateAllPackStatuses(false);
+            listOp->deleteLater();
+            return;
         }
-
-        // Emit dataChanged to refresh the UI
-        emit dataChanged();
+        
+        // Extract pack IDs from manifest filenames
+        QStringList installedPacks;
+        for (const QString &manifestFile : manifestFiles) {
+            QString packId = manifestFile;
+            packId.chop(5); // Remove ".pack"
+            installedPacks.append(packId);
+            qDebug() << "[MANIFEST] Found installed pack:" << packId << "from file:" << manifestFile;
+        }
+        
+        qDebug() << "[MANIFEST] Extracted pack IDs:" << installedPacks;
+        qDebug() << "[MANIFEST] Known pack IDs from JSON:" << m_idsList;
+        
+        // Update UI with found packs
+        updatePackStatusesFromInstalledList(installedPacks);
         
         listOp->deleteLater();
     });
@@ -752,23 +745,247 @@ void AssetPacks::updateAllPackStatuses(bool isInstalled)
     emit dataChanged();
 }
 
+void AssetPacks::updatePackStatusesFromInstalledList(const QStringList &installedPacks)
+{
+    qDebug() << "[MANIFEST] Updating pack statuses from installed list:" << installedPacks;
+    qDebug() << "[MANIFEST] Total known packs:" << m_idsList.size();
+    qDebug() << "[MANIFEST] Known pack IDs:" << m_idsList;
+    
+    // Ensure the installed list is properly sized
+    if (m_isInstalledList.size() != m_idsList.size()) {
+        qDebug() << "[MANIFEST] Resizing installed list from" << m_isInstalledList.size() << "to" << m_idsList.size();
+        m_isInstalledList.resize(m_idsList.size());
+        m_isInstalledList.fill(false); // Initialize all as not installed
+    }
+    
+    // Update status for all known packs
+    for (int i = 0; i < m_idsList.size(); ++i) {
+        QString packId = m_idsList[i];
+        bool isInstalled = installedPacks.contains(packId);
+        m_isInstalledList[i] = isInstalled;
+        qDebug() << "[MANIFEST] Pack" << packId << "at index" << i << "installed:" << isInstalled;
+    }
+    
+    qDebug() << "[MANIFEST] Final installed status list:" << m_isInstalledList;
+
+    // Emit dataChanged to refresh the UI
+    emit dataChanged();
+}
+
 void AssetPacks::updateAssetPackStatus(const QString &packId, bool isInstalled)
 {
     int index = m_idsList.indexOf(packId);
-    if (index >= 0 && index < m_isInstalledList.size() && 
-        index < m_titlesList.size() && index < m_authorsList.size() && 
-        index < m_descriptionsList.size() && index < m_previewUrlsList.size() &&
-        index < m_sourceUrlsList.size() && index < m_zipUrlsList.size()) {
+    if (index < 0) {
+        qDebug() << "[ASSET UPDATE] Pack ID not found in ids list:" << packId;
+        return;
+    }
+
+    // Ensure installed list matches ids list size
+    if (m_isInstalledList.size() != m_idsList.size()) {
+        qDebug() << "[ASSET UPDATE] Resizing m_isInstalledList from" << m_isInstalledList.size() << "to" << m_idsList.size();
+        m_isInstalledList.resize(m_idsList.size());
+        // Fill any new entries with false
+        for (int i = 0; i < m_isInstalledList.size(); ++i) {
+            if (i >= m_isInstalledList.size()) break; // safety
+        }
+    }
+
+    qDebug() << "[ASSET UPDATE] Updating status for pack:" << packId << "at index:" << index << "to installed:" << isInstalled;
+    m_isInstalledList[index] = isInstalled;
+
+    // Defer dataChanged slightly to avoid UI races
+    QTimer::singleShot(50, this, [this]() {
+        emit dataChanged();
+    });
+}
+
+void AssetPacks::processUploadQueue()
+{
+    if (m_uploadQueue.isEmpty() || m_isUploading) {
+        qDebug() << "[QUEUE] Queue processing skipped - empty:" << m_uploadQueue.isEmpty() << "uploading:" << m_isUploading;
+        return;
+    }
+    
+    QueuedUpload upload = m_uploadQueue.dequeue();
+    qDebug() << "[QUEUE] Processing upload for pack:" << upload.packId << "Remaining in queue:" << m_uploadQueue.size();
+    
+    m_isUploading = true;
+    startUpload(upload);
+}
+
+void AssetPacks::startUpload(const QueuedUpload &upload)
+{
+    qDebug() << "[UPLOAD START] Starting upload for pack:" << upload.packId;
+    
+    // Upload all top-level folders from the archive; utility will recurse and preserve structure
+    
+    // Debug: Check what's actually in the extracted directory
+    qDebug() << "[ASSET DEBUG] Uploading root folders:" << upload.rootFolderNames;
+    
+    // Count files recursively
+    int fileCount = 0;
+    for (const QString &rootFolderName : upload.rootFolderNames) {
+        const QString localRoot = QDir(upload.extractPath).filePath(rootFolderName);
+        QDirIterator it(localRoot, QDir::Files, QDirIterator::Subdirectories);
+        while (it.hasNext()) {
+            it.next();
+            fileCount++;
+        }
+    }
+    qDebug() << "[ASSET DEBUG] Total files found recursively:" << fileCount;
+    
+    // Pass the root directory URL - FilesUploadOperation will handle directory traversal
+    QList<QUrl> fileUrls;
+    for (const QString &rootFolderName : upload.rootFolderNames) {
+        const QString localRoot = QDir(upload.extractPath).filePath(rootFolderName);
+        fileUrls.append(QUrl::fromLocalFile(localRoot));
+        qDebug() << "[ASSET DEBUG] Queueing root directory for upload:" << localRoot;
+    }
+    
+    // Disable virtual display/screen stream during upload to avoid RPC/UI races
+    if (m_backend && m_backend->device() && m_backend->device()->deviceState()) {
+        m_backend->device()->deviceState()->setAllowVirtualDisplay(false);
+    }
+    if (m_backend) {
+        m_backend->stopFullScreenStreaming();
+    }
+    qDebug() << "[UPLOAD START] Starting file upload operation";
+    Flipper::Zero::FilesUploadOperation *uploadOp = m_backend->device()->utility()->uploadFiles(fileUrls, upload.flipperParentPath.toUtf8());
+    
+    // Add a timer to track upload progress
+    QTimer *progressTimer = new QTimer(this);
+    QPointer<QTimer> progressTimerGuard(progressTimer);
+    QPointer<AbstractOperation> uploadOpGuard(uploadOp);
+    progressTimer->setInterval(1000); // Check every second
+    connect(progressTimer, &QTimer::timeout, this, [=]() {
+        if (!uploadOpGuard || !progressTimerGuard) return;
+        qDebug() << "[TIMER] Upload still running, progress:" << uploadOpGuard->progress();
+    });
+    progressTimer->start();
+    
+    QMetaObject::Connection progressConn = connect(uploadOp, &AbstractOperation::progressChanged, this, [=]() {
+        try {
+            int progress = qBound(50, 50 + static_cast<int>(uploadOp->progress() / 2), 100);
+            qDebug() << "[PROGRESS] Upload progress:" << uploadOp->progress() << "-> UI progress:" << progress;
+            emit installProgress(upload.packId, progress);
+        } catch (...) {
+            qDebug() << "[PROGRESS] Exception in progress handler";
+        }
+    });
+    
+    // Force initial progress update
+    emit installProgress(upload.packId, 50);
+    
+    connect(uploadOp, &AbstractOperation::finished, this, [=]() {
+        try {
+            qDebug() << "[FINISH] Upload operation finished for pack:" << upload.packId;
+            if (uploadOp->isError()) {
+                qDebug() << "[FINISH] Upload error:" << uploadOp->errorString();
+                emit installFinished(upload.packId, false, QString("Upload failed: %1").arg(uploadOp->errorString()));
+            } else {
+                qDebug() << "[FINISH] Upload successful for pack:" << upload.packId;
+                emit installProgress(upload.packId, 100);
+                emit installFinished(upload.packId, true, "Asset pack installed successfully");
+                
+                // Update asset pack status to show as installed
+                updateAssetPackStatus(upload.packId, true);
+                
+                // Create asset pack manifest file immediately for detection
+                qDebug() << "[INSTALL] Creating manifest immediately after upload completion";
+                // Pass first folder name for backward-compat; manifest will include all folders from JSON
+                const QString firstFolder = upload.rootFolderNames.isEmpty() ? QString() : upload.rootFolderNames.first();
+                createAssetPackManifest(upload.packId, firstFolder);
+            }
+            
+            // Clean up progress timer safely
+            if (progressTimerGuard) {
+                progressTimerGuard->stop();
+                progressTimerGuard->deleteLater();
+            }
+            
+            // Clean up temp directory
+            if (upload.tempDir) {
+                QTimer::singleShot(1000, [upload]() {
+                    if (upload.tempDir) {
+                        delete upload.tempDir;
+                    }
+                });
+            }
+            
+            // Mark upload as finished and process next in queue
+            m_isUploading = false;
+            qDebug() << "[QUEUE] Upload finished for pack:" << upload.packId << "Processing next in queue";
+            
+            // Process next item in queue
+            QTimer::singleShot(500, this, [this]() {
+                processUploadQueue();
+            });
+            
+            // Re-enable virtual display after upload completes
+            QTimer::singleShot(2000, this, [this]() {
+                try {
+                    if (m_backend && m_backend->device() && m_backend->device()->deviceState()) {
+                        m_backend->device()->deviceState()->setAllowVirtualDisplay(true);
+                    }
+                    qDebug() << "[FINISH] Virtual display re-enabled";
+                } catch (...) {
+                    qDebug() << "[FINISH] Exception while re-enabling virtual display";
+                }
+            });
+            
+        } catch (...) {
+            qDebug() << "[FINISH] Exception in upload finished handler";
+            m_isUploading = false;
+            // Still try to process next in queue
+            QTimer::singleShot(500, this, [this]() {
+                processUploadQueue();
+            });
+        }
+    });
+    
+    uploadOp->start();
+}
+
+void AssetPacks::refreshInstalledPacks()
+{
+    qDebug() << "[MANIFEST] Manual refresh of installed packs requested";
+    if (m_backend && m_backend->device()) {
+        checkInstalledPacks();
+    } else {
+        qDebug() << "[MANIFEST] Cannot refresh - no device connected";
+    }
+}
+
+void AssetPacks::forceRefreshDetection()
+{
+    qDebug() << "[MANIFEST] Force refresh detection requested";
+    if (m_backend && m_backend->device()) {
+        // Clear current status first
+        updateAllPackStatuses(false);
         
-        qDebug() << "[ASSET UPDATE] Updating status for pack:" << packId << "at index:" << index << "to installed:" << isInstalled;
-        m_isInstalledList[index] = isInstalled;
-        
-        // Use QTimer::singleShot to defer the dataChanged signal to avoid race conditions
-        QTimer::singleShot(100, this, [this]() {
-            qDebug() << "[ASSET UPDATE] Emitting dataChanged signal";
-            emit dataChanged();
+        // Wait a moment then do a fresh detection
+        QTimer::singleShot(500, this, [this]() {
+            qDebug() << "[MANIFEST] Performing forced detection refresh";
+            checkInstalledPacks();
         });
     } else {
-        qDebug() << "[ASSET UPDATE] Invalid index or mismatched list sizes for pack:" << packId << "index:" << index;
+        qDebug() << "[MANIFEST] Cannot force refresh - no device connected";
     }
+}
+
+void AssetPacks::onManifestCreated(const QString &packId)
+{
+    qDebug() << "[MANIFEST] Manifest created for pack:" << packId << "- refreshing detection immediately";
+    
+    // First, ensure the pack is marked as installed locally
+    updateAssetPackStatus(packId, true);
+    
+    // Then refresh detection to ensure consistency
+    checkInstalledPacks();
+    
+    // Also do a second check after a short delay to ensure detection is working
+    QTimer::singleShot(2000, this, [this, packId]() {
+        qDebug() << "[MANIFEST] Second detection check for pack:" << packId;
+        checkInstalledPacks();
+    });
 }
