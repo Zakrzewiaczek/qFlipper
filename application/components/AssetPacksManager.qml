@@ -109,6 +109,7 @@ Item {
                         targzUrl: AssetPacks.targzUrlsList[index]
                         targzSha256: AssetPacks.targzSha256List[index]
                         isInstalled: AssetPacks.isInstalledList[index]
+                        isInQueue: AssetPacks.isInQueueList[index]
                         needsUpdate: AssetPacks.needsUpdateList[index]
                         packs: AssetPacks.packsList[index]
                         anims: AssetPacks.animsList[index]

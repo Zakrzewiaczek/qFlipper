@@ -24,7 +24,8 @@ class AssetPacks : public QObject
 
 public:
     // Upload queue system
-    struct QueuedUpload {
+    struct QueuedUpload
+    {
         QString packId;
         QString extractPath;
         QStringList rootFolderNames;
@@ -43,6 +44,7 @@ public:
     Q_PROPERTY(QStringList targzUrlsList READ targzUrlsList NOTIFY dataChanged)
     Q_PROPERTY(QStringList targzSha256List READ targzSha256List NOTIFY dataChanged)
     Q_PROPERTY(QList<bool> isInstalledList READ isInstalledList NOTIFY dataChanged)
+    Q_PROPERTY(QList<bool> isInQueueList READ isInQueueList NOTIFY dataChanged)
     Q_PROPERTY(QList<bool> needsUpdateList READ needsUpdateList NOTIFY dataChanged)
     Q_PROPERTY(QList<int> packsList READ packsList NOTIFY dataChanged)
     Q_PROPERTY(QList<int> animsList READ animsList NOTIFY dataChanged)
@@ -59,7 +61,7 @@ public:
     Q_INVOKABLE void fetchJson(const QUrl &url);
     Q_INVOKABLE void downloadAndSaveFile(const QString &fileUrl);
     Q_INVOKABLE void performDownload(const QString &fileUrl, const QString &savePath);
-    
+
     // Asset pack installation and management
     Q_INVOKABLE void installAssetPack(const QString &packId, const QString &packUrl);
     Q_INVOKABLE void uninstallAssetPack(const QString &packId);
@@ -71,6 +73,9 @@ public:
 private:
     void updateAllPackStatuses(bool isInstalled);
     void updatePackStatusesFromInstalledList(const QStringList &installedPacks);
+    void checkSha256ForInstalledPacks(const QStringList &installedPacks);
+    void updateAssetPackQueueStatus(const QString &packId, bool isInQueue);
+    void updateAllQueueStatuses();
     void createAssetPackManifest(const QString &packId, const QString &actualFolderName);
     void processUploadQueue();
     void startUpload(const QueuedUpload &upload);
@@ -91,6 +96,7 @@ private:
     QStringList targzUrlsList() const { return m_targzUrlsList; }
     QStringList targzSha256List() const { return m_targzSha256List; }
     QList<bool> isInstalledList() const { return m_isInstalledList; }
+    QList<bool> isInQueueList() const { return m_isInQueueList; }
     QList<bool> needsUpdateList() const { return m_needsUpdateList; }
     QList<int> packsList() const { return m_packsList; }
     QList<int> animsList() const { return m_animsList; }
@@ -109,7 +115,7 @@ signals:
     void downloadStarted();
     void downloadFinished(bool success, const QString &message, const QString &fileUrl);
     void requestSaveFile(const QString &fileUrl, const QString &suggestedFileName);
-    
+
     // Asset pack installation signals
     void installStarted(const QString &packId);
     void installProgress(const QString &packId, int progress);
@@ -142,6 +148,7 @@ private:
     QStringList m_targzUrlsList;
     QStringList m_targzSha256List;
     QList<bool> m_isInstalledList;
+    QList<bool> m_isInQueueList;
     QList<bool> m_needsUpdateList;
     QList<int> m_packsList;
     QList<int> m_animsList;
@@ -155,7 +162,7 @@ private:
     QStringList m_previewUrlsFlat;
     // Map to store actual folder names for each pack ID
     QMap<QString, QString> m_extractedFolderNames;
-    
+
     // Upload queue system
     QQueue<QueuedUpload> m_uploadQueue;
     bool m_isUploading = false;

@@ -16,6 +16,7 @@ T.ProgressBar {
     property alias radius: bg.radius
     property alias fontSize: brightText.font.pixelSize
     property color barColor: Theme.color.bluepurple1
+    property bool isEmpty: false
 
     contentItem: Item {
         id: content
@@ -25,7 +26,7 @@ T.ProgressBar {
         Text {
             id: brightText
             antialiasing: Mitigations.fontRenderingFix
-            visible: !control.indeterminate
+            visible: !control.indeterminate && !control.isEmpty
             color: control.barColor
             text:  Math.round(control.value) + "%"
             anchors.centerIn: parent
@@ -36,7 +37,7 @@ T.ProgressBar {
 
         Item {
             id: animatedDots
-            visible: control.indeterminate
+            visible: control.indeterminate && !control.isEmpty
             anchors.centerIn: parent
             width: 60
             height: 48
@@ -84,7 +85,7 @@ T.ProgressBar {
         Rectangle {
             id: barFill
             clip: true
-            visible: !control.indeterminate
+            visible: !control.indeterminate && !control.isEmpty
             color: control.barColor
             width: visualPosition * parent.width
             height: parent.height

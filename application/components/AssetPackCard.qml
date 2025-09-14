@@ -25,6 +25,7 @@ Item {
     property date added: new Date()
 
     property bool isInstalled: false
+    property bool isInQueue: false
     property bool needsUpdate: false
     property bool installing: false
     property bool uninstalling: false
@@ -606,6 +607,8 @@ Item {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 34
 
+                isEmpty: isInQueue
+
                 barColor: Theme.color.bluepurple2
                 radius: 5
                 fontSize: 32
@@ -613,10 +616,29 @@ Item {
                 from: 0
                 to: 100
 
-                indeterminate: uninstalling
+                indeterminate: uninstalling || isInQueue
 
-                visible: control.installing || control.uninstalling
+                visible: installing || uninstalling || isInQueue
+
+                z: 1
             }
+        }
+        
+        // Progress bar overlay text - positioned absolutely to not affect layout
+        Text {
+            id: brightText
+            visible: isInQueue
+            color: Theme.color.bluepurple2
+            text: "IN QUEUE"
+            
+            // Position relative to progress bar
+            Layout.leftMargin: 64
+            Layout.topMargin: -44
+
+            font.pixelSize: 32
+            font.family: "HaxrCorp 4089"
+            
+            z: 10
         }
 
         Text {
