@@ -624,7 +624,6 @@ Item {
             }
         }
         
-        // Progress bar overlay text - positioned absolutely to not affect layout
         Text {
             id: brightText
             visible: isInQueue

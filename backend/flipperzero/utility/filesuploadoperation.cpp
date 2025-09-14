@@ -15,13 +15,13 @@
 using namespace Flipper;
 using namespace Zero;
 
-FilesUploadOperation::FilesUploadOperation(ProtobufSession *rpc, DeviceState *deviceState, const QList<QUrl> &fileUrls, const QByteArray &remotePath, QObject *parent):
-    AbstractUtilityOperation(rpc, deviceState, parent),
-    m_remotePath(remotePath),
-    m_urlList(fileUrls),
-    m_totalSize(0),
-    m_progressBase(0.0)
-{}
+FilesUploadOperation::FilesUploadOperation(ProtobufSession *rpc, DeviceState *deviceState, const QList<QUrl> &fileUrls, const QByteArray &remotePath, QObject *parent) : AbstractUtilityOperation(rpc, deviceState, parent),
+                                                                                                                                                                         m_remotePath(remotePath),
+                                                                                                                                                                         m_urlList(fileUrls),
+                                                                                                                                                                         m_totalSize(0),
+                                                                                                                                                                         m_progressBase(0.0)
+{
+}
 
 const QString FilesUploadOperation::description() const
 {
@@ -31,15 +31,18 @@ const QString FilesUploadOperation::description() const
 
 void FilesUploadOperation::nextStateLogic()
 {
-    if(operationState() == Ready) {
+    if (operationState() == Ready)
+    {
         setOperationState(ReadingFileList);
         readFileList();
-
-    } else if(operationState() == ReadingFileList) {
+    }
+    else if (operationState() == ReadingFileList)
+    {
         setOperationState(WritingFiles);
         writeFiles();
-
-    } else if(operationState() == WritingFiles) {
+    }
+    else if (operationState() == WritingFiles)
+    {
         // Do nothing here. Finishing is handled in processNextFile() once all files are processed.
         // This avoids prematurely finishing after the first mkdir/file.
     }
@@ -47,53 +50,60 @@ void FilesUploadOperation::nextStateLogic()
 
 void FilesUploadOperation::readFileList()
 {
-    qDebug() << "[UPLOAD DEBUG] FilesUploadOperation::readFileList() - Processing" << m_urlList.size() << "URLs";
-    
-    for(const auto &url: qAsConst(m_urlList)) {
+    qDebug().noquote() << "[UPLOAD] FilesUploadOperation::readFileList() - Processing" << m_urlList.size() << "URLs";
+
+    for (const auto &url : qAsConst(m_urlList))
+    {
         const QFileInfo fileInfo(url.adjusted(QUrl::StripTrailingSlash).toLocalFile());
         const QDir topmostDir = fileInfo.dir();
-        
-        qDebug() << "[UPLOAD DEBUG] Processing URL:" << url.toString();
-        qDebug() << "[UPLOAD DEBUG] File path:" << fileInfo.absoluteFilePath();
-        qDebug() << "[UPLOAD DEBUG] Is file:" << fileInfo.isFile() << "Is dir:" << fileInfo.isDir();
-        qDebug() << "[UPLOAD DEBUG] Topmost dir:" << topmostDir.absolutePath();
+
+        qDebug().noquote() << "[UPLOAD] Processing URL:" << url.toString();
+        qDebug().noquote() << "[UPLOAD] File path:" << fileInfo.absoluteFilePath();
+        qDebug().noquote() << "[UPLOAD] Is file:" << fileInfo.isFile() << "Is dir:" << fileInfo.isDir();
+        qDebug().noquote() << "[UPLOAD] Topmost dir:" << topmostDir.absolutePath();
 
         m_fileList.append({fileInfo, topmostDir});
 
-        if(fileInfo.isFile()) {
+        if (fileInfo.isFile())
+        {
             m_totalSize += fileInfo.size();
-            qDebug() << "[UPLOAD DEBUG] Added file:" << fileInfo.fileName() << "Size:" << fileInfo.size();
-
-        } else if(fileInfo.isDir()) {
+            qDebug().noquote() << "[UPLOAD] Added file:" << fileInfo.fileName() << "Size:" << fileInfo.size();
+        }
+        else if (fileInfo.isDir())
+        {
             QDir dir(fileInfo.absoluteFilePath());
             dir.setFilter(QDir::Files | QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden);
             dir.setSorting(QDir::Name | QDir::DirsFirst);
-            
-            qDebug() << "[UPLOAD DEBUG] Scanning directory:" << dir.absolutePath();
-            qDebug() << "[UPLOAD DEBUG] Directory exists:" << dir.exists();
-            qDebug() << "[UPLOAD DEBUG] Directory is readable:" << dir.isReadable();
+
+            qDebug().noquote() << "[UPLOAD] Scanning directory:" << dir.absolutePath();
+            qDebug().noquote() << "[UPLOAD] Directory exists:" << dir.exists();
+            qDebug().noquote() << "[UPLOAD] Directory is readable:" << dir.isReadable();
 
             QDirIterator it(dir, QDirIterator::Subdirectories);
             int dirFileCount = 0;
-            while(it.hasNext()) {
+            while (it.hasNext())
+            {
                 const QFileInfo fileInfo(it.next());
                 dirFileCount++;
 
                 m_fileList.append({fileInfo, topmostDir});
 
-                if(fileInfo.isFile()) {
+                if (fileInfo.isFile())
+                {
                     m_totalSize += fileInfo.size();
-                    qDebug() << "[UPLOAD DEBUG] Found file:" << fileInfo.fileName() << "Size:" << fileInfo.size();
-                } else {
-                    qDebug() << "[UPLOAD DEBUG] Found directory:" << fileInfo.fileName();
+                    qDebug().noquote() << "[UPLOAD] Found file:" << fileInfo.fileName() << "Size:" << fileInfo.size();
+                }
+                else
+                {
+                    qDebug().noquote() << "[UPLOAD] Found directory:" << fileInfo.fileName();
                 }
             }
-            qDebug() << "[UPLOAD DEBUG] Total entries found in directory:" << dirFileCount;
+            qDebug().noquote() << "[UPLOAD] Total entries found in directory:" << dirFileCount;
         }
     }
-    
-    qDebug() << "[UPLOAD DEBUG] FilesUploadOperation::readFileList() - Total files to upload:" << m_fileList.size();
-    qDebug() << "[UPLOAD DEBUG] FilesUploadOperation::readFileList() - Total size:" << m_totalSize;
+
+    qDebug().noquote() << "[UPLOAD] FilesUploadOperation::readFileList() - Total files to upload:" << m_fileList.size();
+    qDebug().noquote() << "[UPLOAD] FilesUploadOperation::readFileList() - Total size:" << m_totalSize;
 
     advanceOperationState();
 }
@@ -103,12 +113,13 @@ void FilesUploadOperation::writeFiles()
     // Use sequential approach to avoid overwhelming the Flipper Zero
     auto fileCountLeft = m_fileList.size();
 
-    if (fileCountLeft == 0) {
+    if (fileCountLeft == 0)
+    {
         advanceOperationState();
         return;
     }
 
-    qDebug() << "[UPLOAD START] Starting sequential upload of" << fileCountLeft << "entries";
+    qDebug().noquote() << "[UPLOAD START] Starting sequential upload of" << fileCountLeft << "entries";
 
     // Process files one by one to avoid overwhelming the Flipper Zero
     m_currentFileIndex = 0;
@@ -120,8 +131,9 @@ void FilesUploadOperation::writeFiles()
 
 void FilesUploadOperation::processNextFile()
 {
-    if (m_currentFileIndex >= m_totalFiles) {
-        qDebug() << "[UPLOAD COMPLETE] All files processed successfully";
+    if (m_currentFileIndex >= m_totalFiles)
+    {
+        qDebug().noquote() << "[UPLOAD COMPLETE] All files processed successfully";
         // Ensure progress shows 100% before finishing
         setProgress(100.0);
         // All files done; finish the operation right here to avoid re-entering state machine
@@ -141,24 +153,26 @@ void FilesUploadOperation::processNextFile()
     const auto absoluteRemotePath = m_remotePath + QByteArrayLiteral("/") + normalizedRelativePath.toLocal8Bit();
     const auto sizeRatio = (m_totalSize > 0) ? (double)fileInfo.size() / m_totalSize : 1.0 / m_totalFiles;
 
-    qDebug() << "[UPLOAD PROCESSING] File" << (m_currentFileIndex + 1) << "of" << m_totalFiles << ":" << absoluteLocalPath;
-    
     // Keep progress driven by accumulated size only to avoid overshooting 100%
     double totalProgress = m_progressBase * 100.0;
-    if (totalProgress < 0.0) totalProgress = 0.0; else if (totalProgress > 100.0) totalProgress = 100.0;
+    if (totalProgress < 0.0)
+        totalProgress = 0.0;
+    else if (totalProgress > 100.0)
+        totalProgress = 100.0;
     setProgress(totalProgress);
-    
+
     // Set a timeout for this individual file operation
     QTimer *fileTimeout = new QTimer(this);
     fileTimeout->setSingleShot(true);
-    fileTimeout->setInterval(30000); // 30 second timeout per file
+    fileTimeout->setInterval(60000); // 60 second timeout per file
 
-    if(fileInfo.isFile()) {
-        qDebug() << "[UPLOAD WRITE] Starting upload of file:" << absoluteLocalPath << "to:" << absoluteRemotePath;
+    if (fileInfo.isFile())
+    {
         auto *file = new QFile(absoluteLocalPath, this);
         auto *operation = rpc()->storageWrite(absoluteRemotePath, file);
 
-        connect(operation, &AbstractOperation::progressChanged, this, [=]() {
+        connect(operation, &AbstractOperation::progressChanged, this, [=]()
+                {
             // Progress is based on total bytes ratio, not file count
             double totalProgress = (m_progressBase + (operation->progress() / 100.0) * sizeRatio) * 100.0;
             if (totalProgress < 0.0) totalProgress = 0.0; else if (totalProgress > 100.0) totalProgress = 100.0;
@@ -168,17 +182,15 @@ void FilesUploadOperation::processNextFile()
                 totalProgress = 100.0;
             }
             
-            setProgress(totalProgress);
-        });
+            setProgress(totalProgress); });
 
-        connect(operation, &AbstractOperation::finished, this, [=]() {
+        connect(operation, &AbstractOperation::finished, this, [=]()
+                {
             fileTimeout->stop();
             fileTimeout->deleteLater();
             if(operation->isError()) {
-                qDebug() << "[UPLOAD WRITE ERROR] Failed to upload:" << absoluteLocalPath << "Error:" << operation->errorString();
                 finishWithError(operation->error(), operation->errorString());
             } else {
-                qDebug() << "[UPLOAD WRITE SUCCESS] Uploaded:" << absoluteLocalPath;
                 // Accumulate completed file share of total progress
                 m_progressBase += sizeRatio;
                 double totalProgress = m_progressBase * 100.0;
@@ -188,43 +200,38 @@ void FilesUploadOperation::processNextFile()
                 // Small delay to respect SD card SPI speeds and avoid overwhelming the device
                 QTimer::singleShot(300, this, &FilesUploadOperation::processNextFile);
             }
-            operation->deleteLater();
-        });
-        
-        connect(fileTimeout, &QTimer::timeout, this, [=]() {
-            qDebug() << "[UPLOAD TIMEOUT] File upload timed out:" << absoluteLocalPath;
+            operation->deleteLater(); });
+
+        connect(fileTimeout, &QTimer::timeout, this, [=]()
+                {
             operation->deleteLater();
             fileTimeout->deleteLater();
-            finishWithError(BackendError::TimeoutError, "File upload timed out");
-        });
-        
-        fileTimeout->start();
+            finishWithError(BackendError::TimeoutError, "File upload timed out"); });
 
-    } else if(fileInfo.isDir()) {
-        qDebug() << "[UPLOAD MKDIR] Creating directory:" << absoluteRemotePath;
+        fileTimeout->start();
+    }
+    else if (fileInfo.isDir())
+    {
         auto *operation = rpc()->storageMkdir(absoluteRemotePath);
-        connect(operation, &AbstractOperation::finished, this, [=]() {
+        connect(operation, &AbstractOperation::finished, this, [=]()
+                {
             fileTimeout->stop();
             fileTimeout->deleteLater();
             if(operation->isError()) {
-                qDebug() << "[UPLOAD MKDIR ERROR] Failed to create directory:" << absoluteRemotePath << "Error:" << operation->errorString();
                 finishWithError(operation->error(), operation->errorString());
             } else {
-                qDebug() << "[UPLOAD MKDIR SUCCESS] Created directory:" << absoluteRemotePath;
                 m_currentFileIndex++;
                 // Small delay to respect SD card SPI speeds and avoid overwhelming the device
                 QTimer::singleShot(300, this, &FilesUploadOperation::processNextFile);
             }
-            operation->deleteLater();
-        });
-        
-        connect(fileTimeout, &QTimer::timeout, this, [=]() {
-            qDebug() << "[UPLOAD TIMEOUT] Directory creation timed out:" << absoluteRemotePath;
+            operation->deleteLater(); });
+
+        connect(fileTimeout, &QTimer::timeout, this, [=]()
+                {
             operation->deleteLater();
             fileTimeout->deleteLater();
-            finishWithError(BackendError::TimeoutError, "Directory creation timed out");
-        });
-        
+            finishWithError(BackendError::TimeoutError, "Directory creation timed out"); });
+
         fileTimeout->start();
     }
 }

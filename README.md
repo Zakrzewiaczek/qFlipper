@@ -25,7 +25,7 @@ Download qFlipper Momentum Edition builds here: [https://github.com/Zakrzewiacze
 * Stream Flipper's display and control it remotely
 * Install firmware from a `.dfu` file
 * Backup and restore settings, progress and pairing data
-* Automatic self-update feature
+* Automatic self-update feature (coming soon)
 * Command line interface
 
 ## Build from sources
