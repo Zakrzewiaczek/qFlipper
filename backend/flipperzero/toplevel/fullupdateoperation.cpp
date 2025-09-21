@@ -271,6 +271,9 @@ void FullUpdateOperation::uploadUpdateFiles()
 
     const auto remotePath = QStringLiteral("%1/%2").arg(QStringLiteral(REMOTE_DIR), m_updateDirectory.dirName()).toLocal8Bit();
     auto *operation = m_utility->uploadFiles(m_fileUrls, remotePath);
+    
+    // Disable file timeout for firmware updates (large files may take longer than 30s)
+    operation->setFileTimeoutEnabled(false);
 
     connect(operation, &AbstractOperation::progressChanged, this, [=]() {
         deviceState()->setProgress(operation->progress());

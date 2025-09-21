@@ -27,6 +27,9 @@ public:
     FilesUploadOperation(ProtobufSession *rpc, DeviceState *deviceState, const QList<QUrl> &fileUrls,
                          const QByteArray &remotePath, QObject *parent = nullptr);
     const QString description() const override;
+    
+    // Method to disable file timeout for firmware updates
+    void setFileTimeoutEnabled(bool enabled) { m_enableFileTimeout = enabled; }
 
 private slots:
     void nextStateLogic() override;
@@ -43,6 +46,7 @@ private:
     double m_progressBase;
     int m_currentFileIndex;
     int m_totalFiles;
+    bool m_enableFileTimeout;
 };
 
 }

@@ -3,6 +3,11 @@
 #include <QDebug>
 #include <QLoggingCategory>
 #include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QTimer>
+#include <QSerialPortInfo>
+
+#include "serialfinder.h"
 
 #include "logger.h"
 #include "deviceregistry.h"
@@ -14,6 +19,7 @@
 #include "flipperzero/screenstreamer.h"
 #include "flipperzero/virtualdisplay.h"
 #include "flipperzero/filemanager.h"
+#include "flipperzero/protobufsession.h"
 
 #include "flipperzero/flipperzero.h"
 #include "flipperzero/devicestate.h"
@@ -52,6 +58,17 @@ ApplicationBackend::ApplicationBackend(QObject *parent):
 
     initLibraryPaths();
     initConnections();
+}
+bool ApplicationBackend::cliActive() const
+{
+    return m_cliActive;
+}
+
+void ApplicationBackend::setCliActive(bool active)
+{
+    if (m_cliActive == active) return;
+    m_cliActive = active;
+    emit cliActiveChanged();
 }
 
 ApplicationBackend::BackendState ApplicationBackend::backendState() const
@@ -238,6 +255,112 @@ void ApplicationBackend::finalizeOperation()
     }
 }
 
+void ApplicationBackend::enterCliMode()
+{
+    if (!device()) {
+        return;
+    }
+    setCliActive(true);
+    // Stop RPC session only if currently up
+    if (device()->rpc() && device()->rpc()->isSessionUp()) {
+        m_waitingRpcStop = true;
+        device()->rpc()->stopSession();
+        // Wait briefly for port closure
+        QElapsedTimer t; t.start();
+        while (t.elapsed() < 200) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+        }
+        m_waitingRpcStop = false;
+    }
+}
+
+void ApplicationBackend::exitCliMode()
+{
+    if (!device()) {
+        return;
+    }
+    setCliActive(false);
+    // Resume RPC only after ensuring CLI released the port; then start screen streamer
+    auto *rpc = device()->rpc();
+    if (!rpc) {
+        return;
+    }
+
+    // Refresh serial port info (in case COM id changed)
+    if (deviceState()) {
+        const auto info = deviceState()->deviceInfo();
+        rpc->setMajorVersion(info.protobuf.versionMajor);
+        rpc->setMinorVersion(info.protobuf.versionMinor);
+        rpc->setSerialPort(info.portInfo);
+    }
+
+    // One-shot connection to start streamer only after RPC is up
+    QMetaObject::Connection conn;
+    conn = QObject::connect(rpc, &ProtobufSession::sessionStateChanged, this, [this, rpc, conn]() mutable {
+        if (rpc->isSessionUp()) {
+            if (m_screenStreamer && deviceState() && !deviceState()->isRecoveryMode()) {
+                m_screenStreamer->start();
+            }
+            QObject::disconnect(conn);
+        }
+    });
+
+    // Start RPC later to avoid handle race and only if CLI is not active
+    QTimer::singleShot(600, this, [this, rpc]() {
+        if (!m_cliActive) {
+            rpc->startSession();
+        }
+    });
+}
+
+void ApplicationBackend::rescanDevicePort()
+{
+    if (!device() || !deviceState()) {
+        return;
+    }
+
+    // Re-run serial finder based on current USB serial number to refresh portInfo
+    const auto serial = deviceState()->deviceInfo().usbInfo.serialNumber();
+    if (serial.isEmpty()) {
+        return;
+    }
+
+    auto *finder = new SerialFinder(serial, this);
+    finder->setNumberOfTries(10);
+    finder->setTryPeriod(100);
+    connect(finder, &SerialFinder::finished, this, [this, finder](const QSerialPortInfo &portInfo) {
+        finder->deleteLater();
+        if (portInfo.isNull()) {
+            return;
+        }
+        // Update device info with new port and re-kick RPC
+        auto info = deviceState()->deviceInfo();
+        info.portInfo = portInfo;
+        info.systemLocation = portInfo.systemLocation();
+        deviceState()->setDeviceInfo(info);
+    });
+
+    // Direct call; SerialFinder manages its own timer
+    QMetaObject::invokeMethod(finder, "findMatchingPort", Qt::QueuedConnection);
+}
+
+void ApplicationBackend::restartDeviceAfterCli()
+{
+    if (!device()) {
+        return;
+    }
+
+    // Force RPC stop (no-op if already stopped)
+    if (device()->rpc()) {
+        device()->rpc()->stopSession();
+    }
+
+    // Re-emit deviceInfoChanged on current device to trigger FlipperZero::onDeviceInfoChanged logic
+    if (deviceState()) {
+        deviceState()->setDeviceInfo(deviceState()->deviceInfo());
+    }
+}
+
 void ApplicationBackend::onCurrentDeviceChanged()
 {
     // Should not happen during an ongoing operation
@@ -265,7 +388,9 @@ void ApplicationBackend::onCurrentDeviceChanged()
 
         if(!deviceState()->isRecoveryMode()) {
             connect(m_screenStreamer, &ScreenStreamer::streamStateChanged, this, &ApplicationBackend::onScreenStreamerStateChanged);
-            m_screenStreamer->start();
+            if (!m_cliActive) {
+                m_screenStreamer->start();
+            }
 
         } else {
             setBackendState(BackendState::Ready);
@@ -279,6 +404,11 @@ void ApplicationBackend::onCurrentDeviceChanged()
 
 void ApplicationBackend::onDeviceInfoChanged()
 {
+    // Do not (re)initialize RPC while CLI holds the serial port
+    if (m_cliActive) {
+        qCDebug(LOG_BACKEND) << "CLI active; skipping RPC init on device info change";
+        return;
+    }
     if(deviceState()->isRecoveryMode()) {
         return;
     }
@@ -347,6 +477,19 @@ void ApplicationBackend::onScreenStreamerStateChanged()
     // TODO: check for ScreenStreamer errors
 }
 
+void ApplicationBackend::onRpcSessionStateChanged()
+{
+    // Ensure screen streaming only starts when CLI is inactive
+    if (!device() || !device()->rpc()) {
+        return;
+    }
+    if (device()->rpc()->isSessionUp() && !m_cliActive) {
+        if (m_screenStreamer && deviceState() && !deviceState()->isRecoveryMode()) {
+            m_screenStreamer->start();
+        }
+    }
+}
+
 void ApplicationBackend::initLibraryPaths()
 {
     const auto appPath = qApp->applicationDirPath();
@@ -369,6 +512,11 @@ void ApplicationBackend::initConnections()
 
     connect(m_deviceRegistry, &DeviceRegistry::errorOccured, this, &ApplicationBackend::onDeviceRegistryErrorOccured);
     connect(m_fileManager, &FileManager::errorOccured, this, &ApplicationBackend::onFileManagerErrorOccured);
+
+    // Track RPC session changes to coordinate with CLI
+    if (device() && device()->rpc()) {
+        connect(device()->rpc(), &ProtobufSession::sessionStateChanged, this, &ApplicationBackend::onRpcSessionStateChanged);
+    }
 }
 
 void ApplicationBackend::beginUpdate()

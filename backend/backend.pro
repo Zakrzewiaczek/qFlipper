@@ -14,6 +14,7 @@ SOURCES += \
     abstractoperationrunner.cpp \
     abstractserialoperation.cpp \
     applicationbackend.cpp \
+    climanager.cpp \
     deviceregistry.cpp \
     failable.cpp \
     filenode.cpp \
@@ -123,6 +124,7 @@ HEADERS += \
     applicationbackend.h \
     assetpacks.h \
     backenderror.h \
+    climanager.h \
     deviceregistry.h \
     failable.h \
     fileinfo.h \

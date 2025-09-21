@@ -15,20 +15,21 @@ AbstractOverlay {
 
     onDeviceInfoChanged: tabs.currentIndex = 0;
 
-    TabButton {
-        id: developerTab
-        icon.source: "qrc:/assets/gfx/symbolic/developer-mode.svg"
-        icon.width: 27
-        icon.height: 27
+        TabButton {
+            id: developerTab
+            icon.source: "qrc:/assets/gfx/symbolic/developer-mode.svg"
+            icon.width: 27
+            icon.height: 27
 
-        enabled: App.isDeveloperMode
-        visible: App.isDeveloperMode
+            enabled: App.isDeveloperMode
+            visible: App.isDeveloperMode
 
-        ToolTip {
-            text: qsTr("Developer mode. Use with caution!")
-            visible: parent.hovered
+            ToolTip {
+                text: qsTr("Developer mode. Use with caution!")
+                visible: parent.hovered
+            }
+            onCheckedChanged: if(checked) { terminalView.deactivate(); }
         }
-    }
 
     MessageDialog {
         id: messageDialog
@@ -85,15 +86,24 @@ AbstractOverlay {
         anchors.topMargin: -2
 
         currentIndex: tabs.currentIndex
-        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked || assetPacksTab.checked ? 0.9 : 0)
+        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked || assetPacksTab.checked || cliTab.checked ? 0.9 : 0)
 
         items: [
             DeviceInfo { id: deviceInfoPane },
             DeviceActions { id: deviceActions },
             FileManager { id: fileManager; messageDialog: messageDialog; confirmationDialog: confirmationDialog; },
             AssetPacksManager { id: assetPacksPane },
+            TerminalView { id: terminalView },
             DeveloperActions { id: developerActions }
         ]
+    }
+
+    // Delay helper for safe FileManager refresh after RPC restarts
+    Timer {
+        id: fmRefreshDelay
+        interval: 450
+        repeat: false
+        onTriggered: Backend.fileManager.refresh()
     }
 
     TabBar {
@@ -112,9 +122,12 @@ AbstractOverlay {
                 text: qsTr("Device information")
                 visible: parent.hovered
             }
+            onCheckedChanged: if(checked) { terminalView.deactivate(); }
         }
 
+        // Advanced controls
         TabButton {
+            id: advancedTab
             icon.source: "qrc:/assets/gfx/symbolic/wrench.svg"
             icon.width: 27
             icon.height: 27
@@ -123,7 +136,10 @@ AbstractOverlay {
                 text: qsTr("Advanced controls")
                 visible: parent.hovered
             }
+            onCheckedChanged: if(checked) { terminalView.deactivate(); }
         }
+
+        
 
         TabButton {
             id: fileManagerTab
@@ -133,7 +149,10 @@ AbstractOverlay {
             icon.width: 23
             icon.height: 29
 
-            onCheckedChanged: if(checked) Backend.fileManager.refresh()
+            onCheckedChanged: if(checked) {
+                terminalView.deactivate();
+                fmRefreshDelay.restart();
+            }
 
             ToolTip {
                 text: qsTr("File manager")
@@ -149,11 +168,28 @@ AbstractOverlay {
             icon.width: 25
             icon.height: 25
 
-            onCheckedChanged: if(checked) AssetPacks.refreshInstalledPacks()
+            onCheckedChanged: if(checked) { AssetPacks.refreshInstalledPacks(); terminalView.deactivate(); }
 
             ToolTip {
                 text: qsTr("Asset Packs Manager")
                 visible: parent.hovered
+            }
+        }
+
+        TabButton {
+            id: cliTab
+            enabled: Backend.deviceState && !Backend.deviceState.isRecoveryMode
+
+            icon.source: "qrc:/assets/gfx/symbolic/terminal.svg"
+            icon.width: 24
+            icon.height: 24
+
+            ToolTip {
+                text: qsTr("CLI Terminal")
+                visible: parent.hovered
+            }
+            onCheckedChanged: {
+                if (checked) terminalView.activate();
             }
         }
     }

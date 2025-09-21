@@ -22,6 +22,7 @@
 #include "asciievent.h"
 #include "logger.h"
 #include "assetpacks.h"
+#include "climanager.h"
 
 Q_LOGGING_CATEGORY(LOG_APP, "APP")
 
@@ -202,6 +203,7 @@ void Application::initTranslations()
 void Application::initQmlTypes()
 {
     qmlRegisterType<ScreenCanvas>("QFlipper", 1, 0, "ScreenCanvas");
+    qmlRegisterType<CliManager>("QFlipper", 1, 0, "CliManager");
 
     qmlRegisterUncreatableType<BackendError>("QFlipper", 1, 0, "BackendError", QStringLiteral("This class is only a enum container"));
     qmlRegisterUncreatableType<InputEvent>("QFlipper", 1, 0, "InputEvent", QStringLiteral("This class is only a enum container"));

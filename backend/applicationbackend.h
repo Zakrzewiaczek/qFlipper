@@ -38,6 +38,7 @@ class ApplicationBackend : public QObject
     Q_PROPERTY(Flipper::Updates::VersionInfo latestFirmwareVersion READ latestFirmwareVersion NOTIFY firmwareUpdateStateChanged)
     Q_PROPERTY(BackendError::ErrorType errorType READ errorType NOTIFY errorTypeChanged)
     Q_PROPERTY(bool isQueryInProgress READ isQueryInProgress NOTIFY isQueryInProgressChanged)
+    Q_PROPERTY(bool cliActive READ cliActive WRITE setCliActive NOTIFY cliActiveChanged)
 
 public:
     enum class BackendState {
@@ -111,12 +112,22 @@ public:
     Q_INVOKABLE void checkFirmwareUpdates();
     Q_INVOKABLE void finalizeOperation();
 
+    // CLI integration: temporarily stop/start RPC to free serial port
+    Q_INVOKABLE void enterCliMode();
+    Q_INVOKABLE void exitCliMode();
+    Q_INVOKABLE void rescanDevicePort();
+    Q_INVOKABLE void restartDeviceAfterCli();
+    Q_INVOKABLE void setCliActive(bool active);
+    bool cliActive() const;
+
 signals:
     void errorTypeChanged();
     void currentDeviceChanged();
     void backendStateChanged();
     void firmwareUpdateStateChanged();
     void isQueryInProgressChanged();
+    void cliActiveChanged();
+    void rpcStopped();
 
 private slots:
     void onCurrentDeviceChanged();
@@ -125,6 +136,7 @@ private slots:
     void onDeviceRegistryErrorOccured();
     void onFileManagerErrorOccured();
     void onScreenStreamerStateChanged();
+    void onRpcSessionStateChanged();
 
 private:
     static void initLibraryPaths();
@@ -149,4 +161,7 @@ private:
 
     BackendState m_backendState;
     BackendError::ErrorType m_errorType;
+
+    bool m_cliActive = false;
+    bool m_waitingRpcStop = false;
 };

@@ -30,9 +30,12 @@
         <file>assets/gfx/symbolic/backup-symbolic.svg</file>
         <file>assets/gfx/symbolic/restore-symbolic.svg</file>
         <file>assets/gfx/symbolic/asset-pack.svg</file>
+        <file>assets/gfx/symbolic/terminal.svg</file>
         <file>assets/gfx/symbolic/external-link.svg</file>
         <file>components/SmallButtonGreen.qml</file>
         <file>components/SmallButtonRed.qml</file>
+        <file>components/TerminalView.qml</file>
+        <file>components/CLIManager.qml</file>
         <file>components/WindowControls.qml</file>
         <file>assets/gfx/controls/mac/close.svg</file>
         <file>assets/gfx/controls/mac/minimize.svg</file>
