@@ -54,6 +54,7 @@ public:
     Q_PROPERTY(QList<QStringList> foldersList READ foldersList NOTIFY dataChanged)
     Q_PROPERTY(QStringList lastUpdatedList READ lastUpdatedList NOTIFY dataChanged)
     Q_PROPERTY(QStringList addedList READ addedList NOTIFY dataChanged)
+    Q_PROPERTY(bool hasActiveDownloads READ hasActiveDownloads NOTIFY hasActiveDownloadsChanged)
 
 public:
     explicit AssetPacks(ApplicationBackend *backend, QObject *parent = nullptr);
@@ -69,6 +70,7 @@ public:
     Q_INVOKABLE void updateAssetPackStatus(const QString &packId, bool isInstalled);
     Q_INVOKABLE void refreshInstalledPacks();
     Q_INVOKABLE void forceRefreshDetection();
+    Q_INVOKABLE bool hasActiveDownloads() const;
 
 private:
     void updateAllPackStatuses(bool isInstalled);
@@ -122,6 +124,7 @@ signals:
     void installFinished(const QString &packId, bool success, const QString &message);
     void uninstallFinished(const QString &packId, bool success, const QString &message);
     void manifestCreated(const QString &packId);
+    void hasActiveDownloadsChanged();
 
 private slots:
     void onReplyFinished();
@@ -166,6 +169,9 @@ private:
     // Upload queue system
     QQueue<QueuedUpload> m_uploadQueue;
     bool m_isUploading = false;
+    
+    // Track if initial scan has completed
+    bool m_initialScanCompleted = false;
 };
 
 extern AssetPacks *globalAssetPacks;

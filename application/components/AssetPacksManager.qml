@@ -11,6 +11,48 @@ Item {
     implicitWidth: 745
     implicitHeight: 297
 
+    // After returning from CLI, RPC and storage info are re‑initialized.
+    // We need a small delay before scanning packs so the SD/ext state is fresh.
+    property bool hasScanned: false
+
+    // Delay before scanning asset packs (helps after CLI exit / RPC reconnect)
+    Timer {
+        id: assetScanDelay
+        interval: 450
+        repeat: false
+        onTriggered: {
+            if (container.visible && Backend.backendState === ApplicationBackend.Ready) {
+                console.log("Asset Packs delayed scan - triggering checkInstalledPacks");
+                AssetPacks.checkInstalledPacks();
+                hasScanned = true;
+            }
+        }
+    }
+
+    // Reset scan flag when device changes
+    Connections {
+        target: Backend
+        function onCurrentDeviceChanged() {
+            hasScanned = false;
+        }
+    }
+
+    // When backend returns to Ready (e.g. after exiting CLI), reschedule a scan
+    Connections {
+        target: Backend
+        function onBackendStateChanged() {
+            if (container.visible && Backend.backendState === ApplicationBackend.Ready) {
+                assetScanDelay.restart()
+            }
+        }
+    }
+
+    onVisibleChanged: {
+        if (visible && Backend.backendState === ApplicationBackend.Ready) {
+            assetScanDelay.restart()
+        }
+    }
+
     RowLayout {
         visible: AssetPacks.errorOccured
 

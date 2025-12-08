@@ -43,6 +43,16 @@ AbstractOverlay {
         radius: backgroundRect.radius
     }
 
+    ConfirmationDialog {
+        id: cliWarningDialog
+        parent: backgroundRect
+        radius: backgroundRect.radius
+        title: qsTr("Asset packs are downloading")
+        message: qsTr("You still have asset packs downloading. Switching to CLI will cancel the downloads.\n\nDo you want to continue?")
+        customText: qsTr("Continue")
+        suggestedRole: ConfirmationDialog.RejectRole
+    }
+
     ProgressDialog {
         id: progressDialog
         parent: backgroundRect
@@ -86,7 +96,7 @@ AbstractOverlay {
         anchors.topMargin: -2
 
         currentIndex: tabs.currentIndex
-        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked || assetPacksTab.checked || cliTab.checked ? 0.9 : 0)
+        backgroundColor: Color.transparent(Theme.color.bluepurple7, fileManagerTab.checked || assetPacksTab.checked || cliTab.checked || paintTab.checked ? 0.9 : 0)
 
         items: [
             DeviceInfo { id: deviceInfoPane },
@@ -94,6 +104,7 @@ AbstractOverlay {
             FileManager { id: fileManager; messageDialog: messageDialog; confirmationDialog: confirmationDialog; },
             AssetPacksManager { id: assetPacksPane },
             TerminalView { id: terminalView },
+            PaintView { id: paintView },
             DeveloperActions { id: developerActions }
         ]
     }
@@ -189,7 +200,48 @@ AbstractOverlay {
                 visible: parent.hovered
             }
             onCheckedChanged: {
-                if (checked) terminalView.activate();
+                if (checked) {
+                    // Check if asset packs are being downloaded/uploaded
+                    if (AssetPacks.hasActiveDownloads) {
+                        // Show warning dialog
+                        cliWarningDialog.openWithCallback(function() {
+                            // User confirmed, activate CLI
+                            terminalView.activate();
+                        }, function() {
+                            // User canceled, switch back to previous tab
+                            cliTab.checked = false;
+                            // Restore previous tab (usually the first one - device info)
+                            tabs.currentIndex = 0;
+                        });
+                    } else {
+                        // No active downloads, proceed normally
+                        terminalView.activate();
+                    }
+                } else {
+                    terminalView.deactivate();
+                }
+            }
+        }
+
+        TabButton {
+            id: paintTab
+            enabled: Backend.deviceState && !Backend.deviceState.isRecoveryMode
+
+            icon.source: "qrc:/assets/gfx/symbolic/paint.svg"
+            icon.width: 24
+            icon.height: 24
+
+            ToolTip {
+                text: qsTr("Paint")
+                visible: parent.hovered
+            }
+            onCheckedChanged: {
+                if (checked) {
+                    terminalView.deactivate();
+                    paintView.activate();
+                } else {
+                    paintView.deactivate();
+                }
             }
         }
     }
@@ -314,7 +366,8 @@ AbstractOverlay {
 
         visible: Backend.firmwareUpdateState !== ApplicationBackend.Unknown &&
                  Backend.firmwareUpdateState !== ApplicationBackend.Checking &&
-                 Backend.firmwareUpdateState !== ApplicationBackend.ErrorOccured
+                 Backend.firmwareUpdateState !== ApplicationBackend.ErrorOccured &&
+                 !paintTab.checked  // Hide when paint tab is active
     }
 
     LinkButton {
@@ -325,6 +378,51 @@ AbstractOverlay {
         anchors.topMargin: 5
 
         action: installFromFileAction
+        visible: !paintTab.checked  // Hide when paint tab is active
+    }
+    
+    // Block clicks on release button (changelog) area when paint tab is active
+    MouseArea {
+        x: centerX - 150  // Approximate position of release button
+        anchors.top: updateButton.bottom
+        anchors.topMargin: 5
+        width: 120  // Approximate width
+        height: 20  // Approximate height
+        z: releaseButton.z + 1
+        visible: paintTab.checked
+        acceptedButtons: Qt.AllButtons
+        propagateComposedEvents: false
+        onClicked: function(mouse) {
+            mouse.accepted = true
+        }
+        onPressed: function(mouse) {
+            mouse.accepted = true
+        }
+        onReleased: function(mouse) {
+            mouse.accepted = true
+        }
+    }
+    
+    // Block clicks on install from file button area when paint tab is active
+    MouseArea {
+        x: centerX + 6
+        anchors.top: updateButton.bottom
+        anchors.topMargin: 5
+        width: 120  // Approximate width
+        height: 20  // Approximate height
+        z: fileButton.z + 1
+        visible: paintTab.checked
+        acceptedButtons: Qt.AllButtons
+        propagateComposedEvents: false
+        onClicked: function(mouse) {
+            mouse.accepted = true
+        }
+        onPressed: function(mouse) {
+            mouse.accepted = true
+        }
+        onReleased: function(mouse) {
+            mouse.accepted = true
+        }
     }
 
     RowLayout {
@@ -334,6 +432,7 @@ AbstractOverlay {
         anchors.leftMargin: 28
         anchors.bottomMargin: 15
         spacing: 20
+        visible: !paintTab.checked  // Hide links when paint tab is active
 
         // GitHub link
         Item {

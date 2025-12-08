@@ -3,6 +3,10 @@
 #include <QDebug>
 #include <QLoggingCategory>
 #include <QRegularExpression>
+#include <QTimer>
+#include <QElapsedTimer>
+#include <QCoreApplication>
+#include <QEventLoop>
 
 Q_LOGGING_CATEGORY(LOG_CLI, "CLI")
 
@@ -106,12 +110,28 @@ void CliManager::disconnectFromDevice()
     setConnected(false);
 
     if (m_serialPort) {
-        m_serialPort->close();
-        m_serialPort->deleteLater();
+        // Disconnect all signals first to prevent any further processing
+        m_serialPort->disconnect();
+        
+        // Close the port immediately
+        if (m_serialPort->isOpen()) {
+            m_serialPort->clear();
+            m_serialPort->flush();
+            m_serialPort->close();
+        }
+        
+        // Delete immediately and process events to release the port handle NOW
+        // This ensures RPC can grab the port immediately
+        delete m_serialPort;
         m_serialPort = nullptr;
+        
+        // Process events to ensure the port handle is actually released
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
     }
 
     m_receivedData.clear();
+    
+    qCInfo(LOG_CLI) << "CLI disconnected, port available for RPC";
 }
 
 void CliManager::sendCommand(const QString &command)
@@ -128,6 +148,22 @@ void CliManager::sendCommand(const QString &command)
     
     // Send command to device
     QByteArray data = command.toUtf8() + "\r";
+    m_serialPort->write(data);
+    m_serialPort->flush();
+}
+
+void CliManager::sendControlChar(char controlChar)
+{
+    if (!m_isConnected || !m_serialPort) {
+        qCWarning(LOG_CLI) << "Cannot send control character: not connected";
+        return;
+    }
+
+    qCDebug(LOG_CLI) << "Sending control character:" << (int)controlChar;
+    
+    // Send raw control character directly to device (no echo)
+    QByteArray data;
+    data.append(controlChar);
     m_serialPort->write(data);
     m_serialPort->flush();
 }

@@ -5,7 +5,11 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QTimer>
+#include <QEventLoop>
+#include <QPointer>
 #include <QSerialPortInfo>
+#include <QSerialPort>
+#include <functional>
 
 #include "serialfinder.h"
 
@@ -20,11 +24,16 @@
 #include "flipperzero/virtualdisplay.h"
 #include "flipperzero/filemanager.h"
 #include "flipperzero/protobufsession.h"
+#include "flipperzero/rpc/systemrebootoperation.h"
+#include "flipperzero/rpc/abstractprotobufoperation.h"
 
 #include "flipperzero/flipperzero.h"
 #include "flipperzero/devicestate.h"
 #include "flipperzero/assetmanifest.h"
-#include "flipperzero/screenstreamer.h"
+#include "flipperzero/utilityinterface.h"
+#include "flipperzero/utility/abstractutilityoperation.h"
+#include "flipperzero/utility/storageinforefreshoperation.h"
+#include "abstractoperation.h"
 
 #include "flipperzero/helper/toplevelhelper.h"
 
@@ -69,6 +78,11 @@ void ApplicationBackend::setCliActive(bool active)
     if (m_cliActive == active) return;
     m_cliActive = active;
     emit cliActiveChanged();
+}
+
+bool ApplicationBackend::isSwitchingMode() const
+{
+    return m_isSwitchingMode;
 }
 
 ApplicationBackend::BackendState ApplicationBackend::backendState() const
@@ -258,58 +272,253 @@ void ApplicationBackend::finalizeOperation()
 void ApplicationBackend::enterCliMode()
 {
     if (!device()) {
+        qCDebug(LOG_BACKEND) << "Cannot enter CLI mode: no device";
         return;
     }
+    
+    // Prevent rapid mode switching
+    if (m_isSwitchingMode) {
+        qCDebug(LOG_BACKEND) << "Already switching modes, ignoring enterCliMode";
+        return;
+    }
+    
+    m_isSwitchingMode = true;
+    emit isSwitchingModeChanged();
+    
     setCliActive(true);
+    device()->setRpcAutostartEnabled(false);
+    
+    // Stop screenstreamer FIRST to avoid "operations still running" error
+    auto *rpc = device()->rpc();
+    if (m_screenStreamer && m_screenStreamer->streamState() != ScreenStreamer::Stopped && rpc && rpc->isSessionUp()) {
+        qCDebug(LOG_BACKEND) << "Stopping screenstreamer before CLI mode";
+        
+        // Use a QEventLoop to wait for the stop operation to complete
+        QEventLoop stopLoop;
+        QTimer timeoutTimer;
+        timeoutTimer.setSingleShot(true);
+        timeoutTimer.setInterval(2000); // 2 second timeout
+        
+        auto conn = QObject::connect(m_screenStreamer, &ScreenStreamer::streamStateChanged, &stopLoop, [&stopLoop, this]() {
+            if (m_screenStreamer->streamState() == ScreenStreamer::Stopped) {
+                stopLoop.quit();
+            }
+        });
+        
+        QObject::connect(&timeoutTimer, &QTimer::timeout, &stopLoop, &QEventLoop::quit);
+        
+        m_screenStreamer->stop();
+        timeoutTimer.start();
+        stopLoop.exec();
+        
+        QObject::disconnect(conn);
+        
+        if (m_screenStreamer->streamState() == ScreenStreamer::Stopped) {
+            qCDebug(LOG_BACKEND) << "Screenstreamer stopped successfully";
+        } else {
+            qCWarning(LOG_BACKEND) << "Screenstreamer stop timed out, proceeding anyway";
+        }
+    }
+    
     // Stop RPC session only if currently up
-    if (device()->rpc() && device()->rpc()->isSessionUp()) {
+    if (rpc && rpc->isSessionUp()) {
         m_waitingRpcStop = true;
-        device()->rpc()->stopSession();
-        // Wait briefly for port closure
-        QElapsedTimer t; t.start();
-        while (t.elapsed() < 200) {
+        qCDebug(LOG_BACKEND) << "Stopping RPC session for CLI mode";
+        rpc->stopSession();
+        
+        // Wait for RPC to actually stop (stopSession is async)
+        QElapsedTimer t;
+        t.start();
+        while (t.elapsed() < 1000 && rpc->isSessionUp()) {
             QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
         }
         m_waitingRpcStop = false;
+        
+        if (rpc->isSessionUp()) {
+            qCWarning(LOG_BACKEND) << "RPC failed to stop within timeout";
+        } else {
+            qCDebug(LOG_BACKEND) << "RPC session stopped successfully, port released";
+        }
     }
+    
+    m_isSwitchingMode = false;
+    emit isSwitchingModeChanged();
 }
 
 void ApplicationBackend::exitCliMode()
 {
     if (!device()) {
+        qCDebug(LOG_BACKEND) << "Cannot exit CLI mode: no device";
         return;
     }
+    
+    // Prevent rapid mode switching
+    if (m_isSwitchingMode) {
+        qCDebug(LOG_BACKEND) << "Already switching modes, queueing exitCliMode";
+        QTimer::singleShot(350, this, &ApplicationBackend::exitCliMode);
+        return;
+    }
+    
+    m_isSwitchingMode = true;
+    emit isSwitchingModeChanged();
+    
     setCliActive(false);
-    // Resume RPC only after ensuring CLI released the port; then start screen streamer
+    device()->setRpcAutostartEnabled(true);
+    
     auto *rpc = device()->rpc();
     if (!rpc) {
+        m_isSwitchingMode = false;
+        emit isSwitchingModeChanged();
         return;
     }
-
-    // Refresh serial port info (in case COM id changed)
-    if (deviceState()) {
-        const auto info = deviceState()->deviceInfo();
-        rpc->setMajorVersion(info.protobuf.versionMajor);
-        rpc->setMinorVersion(info.protobuf.versionMinor);
-        rpc->setSerialPort(info.portInfo);
+    
+    qCInfo(LOG_BACKEND) << "Exiting CLI mode, immediately switching to RPC";
+    
+    // Ensure device state is reset - mark offline temporarily so RPC can properly reconnect
+    if (deviceState() && deviceState()->isOnline()) {
+        deviceState()->setOnline(false);
     }
+    
+    // Start RPC IMMEDIATELY - no delays, mimic rapid switching behavior
+    // Stop any stale session and start fresh right away
+    if (rpc->isSessionUp()) {
+        rpc->stopSession();
+    }
+    
+    // Use Qt.callLater equivalent to start RPC in the next event loop iteration
+    // This ensures CLI disconnect completes first, but starts RPC immediately after
+    QTimer::singleShot(0, this, [this, rpc]() {
+        if (!device() || m_cliActive || !rpc) {
+            m_isSwitchingMode = false;
+            emit isSwitchingModeChanged();
+            return;
+        }
 
-    // One-shot connection to start streamer only after RPC is up
-    QMetaObject::Connection conn;
-    conn = QObject::connect(rpc, &ProtobufSession::sessionStateChanged, this, [this, rpc, conn]() mutable {
-        if (rpc->isSessionUp()) {
-            if (m_screenStreamer && deviceState() && !deviceState()->isRecoveryMode()) {
-                m_screenStreamer->start();
+        qCInfo(LOG_BACKEND) << "Starting RPC session immediately (no delays)";
+        rpc->startSession();
+        
+        // Check if it started - but don't wait long
+        QTimer::singleShot(100, this, [this, rpc]() {
+            if (!device() || m_cliActive || !rpc) {
+                m_isSwitchingMode = false;
+                emit isSwitchingModeChanged();
+                return;
             }
-            QObject::disconnect(conn);
-        }
+            
+            if (rpc->isSessionUp()) {
+                qCInfo(LOG_BACKEND) << "RPC session started successfully";
+            } else {
+                qCWarning(LOG_BACKEND) << "RPC session did not start, retrying once";
+                // Single retry with minimal delay
+                QTimer::singleShot(100, this, [this, rpc]() {
+                    if (device() && !m_cliActive && rpc && !rpc->isSessionUp()) {
+                        rpc->startSession();
+                    }
+                    m_isSwitchingMode = false;
+                    emit isSwitchingModeChanged();
+                });
+                return;
+            }
+            
+            m_isSwitchingMode = false;
+            emit isSwitchingModeChanged();
+        });
     });
+}
 
-    // Start RPC later to avoid handle race and only if CLI is not active
-    QTimer::singleShot(600, this, [this, rpc]() {
-        if (!m_cliActive) {
-            rpc->startSession();
+void ApplicationBackend::startRpcImmediately(Flipper::Zero::ProtobufSession *rpc)
+{
+    if (!device() || m_cliActive || !rpc) {
+        m_isSwitchingMode = false;
+        emit isSwitchingModeChanged();
+        return;
+    }
+    
+    qCInfo(LOG_BACKEND) << "Starting RPC session immediately";
+    
+    // Try to start RPC right away - don't wait for port release
+    // If it fails, retry a few times with short delays
+    if (!rpc->isSessionUp()) {
+        rpc->startSession();
+        
+        // Check if it started successfully after a brief wait
+        QTimer::singleShot(300, this, [this, rpc]() {
+            if (!device() || m_cliActive || !rpc) {
+                m_isSwitchingMode = false;
+                emit isSwitchingModeChanged();
+                return;
+            }
+            
+            if (rpc->isSessionUp()) {
+                qCInfo(LOG_BACKEND) << "RPC session started successfully";
+                m_isSwitchingMode = false;
+                emit isSwitchingModeChanged();
+            } else {
+                qCWarning(LOG_BACKEND) << "RPC session did not start, retrying";
+                // Retry once more
+                QTimer::singleShot(200, this, [this, rpc]() {
+                    if (!device() || m_cliActive || !rpc) {
+                        m_isSwitchingMode = false;
+                        emit isSwitchingModeChanged();
+                        return;
+                    }
+                    
+                    if (!rpc->isSessionUp()) {
+                        rpc->startSession();
+                    }
+                    
+                    // Final check
+                    QTimer::singleShot(500, this, [this, rpc]() {
+                        m_isSwitchingMode = false;
+                        emit isSwitchingModeChanged();
+                    });
+                });
+            }
+        });
+    } else {
+        qCInfo(LOG_BACKEND) << "RPC session already running";
+        m_isSwitchingMode = false;
+        emit isSwitchingModeChanged();
+    }
+}
+
+void ApplicationBackend::proceedWithRpcRestart(Flipper::Zero::ProtobufSession *rpc)
+{
+    if (!device() || m_cliActive || !rpc) {
+        m_isSwitchingMode = false;
+        emit isSwitchingModeChanged();
+        return;
+    }
+    
+    // Rescan port to get fresh port info
+    rescanDevicePort();
+    
+    // Force device info update to trigger RPC restart
+    QTimer::singleShot(300, this, [this, rpc]() {
+        if (!device() || m_cliActive || !rpc) {
+            m_isSwitchingMode = false;
+            emit isSwitchingModeChanged();
+            return;
         }
+        
+        if (deviceState()) {
+            deviceState()->setDeviceInfo(deviceState()->deviceInfo());
+        }
+        
+        // If RPC still hasn't started, start it manually
+        QTimer::singleShot(500, this, [this, rpc]() {
+            if (!m_cliActive && rpc) {
+                if (rpc->isSessionUp()) {
+                    qCInfo(LOG_BACKEND) << "RPC session already running";
+                } else {
+                    qCInfo(LOG_BACKEND) << "RPC session not started automatically, starting manually";
+                    rpc->startSession();
+                }
+            }
+            
+            m_isSwitchingMode = false;
+            emit isSwitchingModeChanged();
+        });
     });
 }
 
@@ -350,6 +559,10 @@ void ApplicationBackend::restartDeviceAfterCli()
         return;
     }
 
+    if (deviceState()) {
+        deviceState()->setOnline(false);
+    }
+
     // Force RPC stop (no-op if already stopped)
     if (device()->rpc()) {
         device()->rpc()->stopSession();
@@ -377,12 +590,6 @@ void ApplicationBackend::onCurrentDeviceChanged()
 
         connect(deviceState(), &DeviceState::deviceInfoChanged, this, &ApplicationBackend::onDeviceInfoChanged);
         connect(deviceState(), &DeviceState::isPersistentChanged, this, &ApplicationBackend::onDeviceInfoChanged);
-        
-        // Check for installed asset packs when device connects
-        if (globalAssetPacks) {
-            // Use QMetaObject to call the method to avoid undefined type issues
-            QMetaObject::invokeMethod(reinterpret_cast<QObject*>(globalAssetPacks), "checkInstalledPacks", Qt::QueuedConnection);
-        }
 
         onDeviceInfoChanged();
 
@@ -484,9 +691,33 @@ void ApplicationBackend::onRpcSessionStateChanged()
         return;
     }
     if (device()->rpc()->isSessionUp() && !m_cliActive) {
-        if (m_screenStreamer && deviceState() && !deviceState()->isRecoveryMode()) {
-            m_screenStreamer->start();
+        // Ensure device state is marked online when RPC reconnects
+        if (deviceState() && !deviceState()->isOnline()) {
+            deviceState()->setOnline(true);
         }
+        
+        // Refresh storage info to update device information after RPC reconnects
+        QTimer::singleShot(200, this, [this]() {
+            if (device() && device()->rpc() && device()->rpc()->isSessionUp() && !m_cliActive) {
+                if (deviceState() && !deviceState()->isRecoveryMode()) {
+                    // Refresh storage info
+                    refreshStorageInfo();
+                    
+                    // Force device reset for screenstreamer to re-establish broadcast connections
+                    // setDevice returns early if device is the same, so we need to reset it
+                    if (m_screenStreamer) {
+                        m_screenStreamer->setDevice(nullptr);
+                        m_screenStreamer->setDevice(device());
+                        
+                        // Start screenstreamer after device reset
+                        m_screenStreamer->start();
+                    }
+                    
+                    // Ensure backend state is Ready
+                    setBackendState(BackendState::Ready);
+                }
+            }
+        });
     }
 }
 

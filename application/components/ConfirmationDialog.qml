@@ -17,14 +17,15 @@ CustomDialog {
     property alias message: messageLabel.text
 
     function openWithMessage(onAcceptedFunc, messageObj = {}) {
+        const onDialogAccepted = function() {
+            control.rejected.disconnect(onDialogRejected);
+            control.accepted.disconnect(onDialogAccepted);
+            onAcceptedFunc();
+        }
+
         const onDialogRejected = function() {
             control.rejected.disconnect(onDialogRejected);
             control.accepted.disconnect(onDialogAccepted);
-        }
-
-        const onDialogAccepted = function() {
-            onDialogRejected();
-            onAcceptedFunc();
         }
 
         control.title = messageObj.title ? messageObj.title : "";
@@ -34,6 +35,25 @@ CustomDialog {
 
         control.rejected.connect(onDialogRejected);
         control.accepted.connect(onDialogAccepted);
+        control.open();
+        widgetContents.forceActiveFocus();
+    }
+
+    function openWithCallback(onAcceptedFunc, onRejectedFunc) {
+        const onDialogAcceptedWithCallback = function() {
+            control.rejected.disconnect(onDialogRejectedWithCallback);
+            control.accepted.disconnect(onDialogAcceptedWithCallback);
+            if (onAcceptedFunc) onAcceptedFunc();
+        }
+
+        const onDialogRejectedWithCallback = function() {
+            control.rejected.disconnect(onDialogRejectedWithCallback);
+            control.accepted.disconnect(onDialogAcceptedWithCallback);
+            if (onRejectedFunc) onRejectedFunc();
+        }
+
+        control.rejected.connect(onDialogRejectedWithCallback);
+        control.accepted.connect(onDialogAcceptedWithCallback);
         control.open();
         widgetContents.forceActiveFocus();
     }

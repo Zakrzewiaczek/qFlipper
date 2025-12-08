@@ -106,6 +106,7 @@ void DeviceState::setAllowVirtualDisplay(bool set)
     }
 
     m_isAllowVirtualDisplay = set;
+    emit isAllowVirtualDisplayChanged();
 }
 
 double DeviceState::progress() const

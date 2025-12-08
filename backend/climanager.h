@@ -25,6 +25,7 @@ public slots:
     void connectToDevice(const QString &portName);
     void disconnectFromDevice();
     void sendCommand(const QString &command);
+    void sendControlChar(char controlChar);
     void clearTerminal();
 
 signals:
@@ -53,6 +54,7 @@ private:
     
     static const int CONNECT_TIMEOUT = 5000; // 5 seconds
 };
+
 
 
 

@@ -10,6 +10,14 @@ Item {
     implicitWidth: 360
     implicitHeight: control.implicitHeight + verticalPadding * 2
 
+    // Ensure screenstreamer is enabled whenever Device Info becomes visible.
+    // This mirrors the behavior that works when leaving File Manager.
+    onVisibleChanged: {
+        if (visible && Backend.backendState === ApplicationBackend.Ready) {
+            Backend.screenStreamer.isEnabled = true
+        }
+    }
+
     readonly property int horizontalPadding: Math.floor((container.implicitWidth - control.implicitWidth) / 2)
     readonly property int verticalPadding: 10
 

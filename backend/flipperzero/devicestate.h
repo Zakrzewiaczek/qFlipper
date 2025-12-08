@@ -17,6 +17,7 @@ class DeviceState : public QObject
 
     Q_PROPERTY(bool isPersistent READ isPersistent NOTIFY isPersistentChanged)
     Q_PROPERTY(bool isOnline READ isOnline NOTIFY isOnlineChanged)
+    Q_PROPERTY(bool isAllowVirtualDisplay READ isAllowVirtualDisplay NOTIFY isAllowVirtualDisplayChanged)
     Q_PROPERTY(bool isError READ isError NOTIFY isErrorChanged)
     Q_PROPERTY(bool isRecoveryMode READ isRecoveryMode NOTIFY deviceInfoChanged)
     Q_PROPERTY(QString statusString READ statusString NOTIFY statusStringChanged)
@@ -38,7 +39,7 @@ public:
     void setOnline(bool set);
 
     bool isAllowVirtualDisplay() const;
-    void setAllowVirtualDisplay(bool set);
+    Q_INVOKABLE void setAllowVirtualDisplay(bool set);
 
     bool isError() const;
 
@@ -63,6 +64,7 @@ signals:
     void deviceInfoChanged();
     void isPersistentChanged();
     void isOnlineChanged();
+    void isAllowVirtualDisplayChanged();
     void statusStringChanged();
     void isErrorChanged();
     void progressChanged();

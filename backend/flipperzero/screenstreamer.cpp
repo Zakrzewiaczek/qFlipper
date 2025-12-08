@@ -2,6 +2,7 @@
 
 #include <QDebug>
 #include <QLoggingCategory>
+#include <QTimer>
 
 #include "flipperzero.h"
 #include "protobufsession.h"
@@ -115,6 +116,11 @@ bool ScreenStreamer::isPaused() const
     return m_streamState == Paused;
 }
 
+ScreenStreamer::StreamState ScreenStreamer::streamState() const
+{
+    return m_streamState;
+}
+
 void ScreenStreamer::setPaused(bool set)
 {
     if(set && m_streamState == Running) {
@@ -149,6 +155,13 @@ void ScreenStreamer::start()
 
         } else {
             setStreamState(Running);
+            // Reset to default frame and emit change to force UI refresh when stream starts
+            // This ensures the UI updates immediately, even before broadcast frames arrive
+            setScreenFrame({
+                transposeImage(QByteArray((char*)default_bits, sizeof(default_bits)), default_width, default_height),
+                QSize(SCREEN_FRAME_WIDTH, SCREEN_FRAME_HEIGHT),
+                Qt::LandscapeOrientation,
+            });
         }
     });
 }
@@ -176,8 +189,10 @@ void ScreenStreamer::stop()
 void ScreenStreamer::onProtobufSessionStateChanged()
 {
     if(!m_device->rpc()->isSessionUp()) {
+        // RPC session went down - stop screen streaming
         setStreamState(Stopped);
     }
+    // When RPC comes back up, ApplicationBackend will call start() explicitly
 }
 
 void ScreenStreamer::onBroadcastResponseReceived(QObject *response)

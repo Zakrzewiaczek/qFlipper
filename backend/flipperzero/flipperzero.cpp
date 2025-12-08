@@ -40,7 +40,8 @@ FlipperZero::FlipperZero(const Zero::DeviceInfo &info, QObject *parent):
     m_state(new DeviceState(info, this)),
     m_rpc(new ProtobufSession(info.portInfo, this)),
     m_recovery(new RecoveryInterface(m_state, this)),
-    m_utility(new UtilityInterface(m_state, m_rpc, this))
+    m_utility(new UtilityInterface(m_state, m_rpc, this)),
+    m_rpcAutostartEnabled(true)
 {
     connect(m_state, &DeviceState::deviceInfoChanged, this, &FlipperZero::onDeviceInfoChanged);
     connect(m_state, &DeviceState::deviceInfoChanged, this, &FlipperZero::deviceStateChanged);
@@ -63,6 +64,20 @@ ProtobufSession *FlipperZero::rpc() const
 UtilityInterface *FlipperZero::utility() const
 {
     return m_utility;
+}
+
+void FlipperZero::setRpcAutostartEnabled(bool enabled)
+{
+    if (m_rpcAutostartEnabled == enabled) {
+        return;
+    }
+    m_rpcAutostartEnabled = enabled;
+    qCDebug(CAT_DEVICE) << "RPC autostart" << (enabled ? "enabled" : "disabled");
+}
+
+bool FlipperZero::rpcAutostartEnabled() const
+{
+    return m_rpcAutostartEnabled;
 }
 
 // TODO: Handle -rcxx suffixes correctly
@@ -219,6 +234,11 @@ void FlipperZero::onDeviceInfoChanged()
     } else if(m_state->isRecoveryMode()) {
         // Recovery mode, not using Protobuf
         m_state->setOnline(true);
+        return;
+    }
+
+    if(!m_rpcAutostartEnabled) {
+        qCDebug(CAT_DEVICE) << "RPC autostart disabled, skipping session start";
         return;
     }
 

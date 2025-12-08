@@ -16,6 +16,7 @@ class DeviceState;
 class FileManager;
 class ScreenStreamer;
 class VirtualDisplay;
+class ProtobufSession;
 }}
 
 #if QT_VERSION >= 0x060000
@@ -39,6 +40,7 @@ class ApplicationBackend : public QObject
     Q_PROPERTY(BackendError::ErrorType errorType READ errorType NOTIFY errorTypeChanged)
     Q_PROPERTY(bool isQueryInProgress READ isQueryInProgress NOTIFY isQueryInProgressChanged)
     Q_PROPERTY(bool cliActive READ cliActive WRITE setCliActive NOTIFY cliActiveChanged)
+    Q_PROPERTY(bool isSwitchingMode READ isSwitchingMode NOTIFY isSwitchingModeChanged)
 
 public:
     enum class BackendState {
@@ -119,6 +121,7 @@ public:
     Q_INVOKABLE void restartDeviceAfterCli();
     Q_INVOKABLE void setCliActive(bool active);
     bool cliActive() const;
+    bool isSwitchingMode() const;
 
 signals:
     void errorTypeChanged();
@@ -128,6 +131,7 @@ signals:
     void isQueryInProgressChanged();
     void cliActiveChanged();
     void rpcStopped();
+    void isSwitchingModeChanged();
 
 private slots:
     void onCurrentDeviceChanged();
@@ -151,6 +155,9 @@ private:
 
     void setBackendState(BackendState newState);
     void setErrorType(BackendError::ErrorType newErrorType);
+    
+    void proceedWithRpcRestart(Flipper::Zero::ProtobufSession *rpc);
+    void startRpcImmediately(Flipper::Zero::ProtobufSession *rpc);
 
     Flipper::DeviceRegistry *m_deviceRegistry;
     Flipper::UpdateRegistry *m_firmwareUpdateRegistry;
@@ -164,4 +171,5 @@ private:
 
     bool m_cliActive = false;
     bool m_waitingRpcStop = false;
+    bool m_isSwitchingMode = false;
 };

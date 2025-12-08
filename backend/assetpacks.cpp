@@ -56,8 +56,14 @@ AssetPacks::AssetPacks(ApplicationBackend *backend, QObject *parent)
                 qCDebug(CATEGORY_ASSETPACKS) << "[QUEUE] Device changed - clearing upload queue";
                 m_uploadQueue.clear();
                 m_isUploading = false;
+                emit hasActiveDownloadsChanged();
                 updateAllQueueStatuses();
-            } });
+            }
+            
+            // Reset scan flag when device changes to allow rescanning on new device
+            qCDebug(CATEGORY_ASSETPACKS) << "Device changed - resetting initial scan flag";
+            m_initialScanCompleted = false;
+        });
     }
 }
 
@@ -324,16 +330,6 @@ void AssetPacks::parseJson(const QByteArray &data)
 
     // Update queue statuses after loading new pack data
     updateAllQueueStatuses();
-
-    // Check for installed packs after loading the pack list
-    // This ensures we have the pack IDs available for matching
-    if (m_backend && m_backend->device())
-    {
-        QTimer::singleShot(500, this, [this]()
-                           {
-            qCDebug(CATEGORY_MANIFESTS) << "Checking installed packs after JSON load";
-            checkInstalledPacks(); });
-    }
 }
 
 void AssetPacks::clearData()
@@ -535,6 +531,15 @@ void AssetPacks::processExtractedFiles(const QString &packId, const QString &ext
         m_backend->stopFullScreenStreaming();
     }
 
+    // Check if RPC session is available and up before starting upload
+    if (!m_backend->device()->rpc() || !m_backend->device()->rpc()->isSessionUp())
+    {
+        qCDebug(CATEGORY_ASSETPACKS) << "Cannot upload - RPC session not ready";
+        emit installFinished(packId, false, "RPC session not ready");
+        delete tempDir;
+        return;
+    }
+
     // Ensure the parent directory exists on Flipper (top-level asset_packs)
     qCDebug(CATEGORY_ASSETPACKS) << "Ensuring parent directory exists on Flipper:" << flipperParentPath;
     auto *mkdirOp = m_backend->device()->rpc()->storageMkdir(flipperParentPath.toUtf8());
@@ -565,6 +570,7 @@ void AssetPacks::processExtractedFiles(const QString &packId, const QString &ext
         
         // Add to queue
         m_uploadQueue.enqueue(upload);
+        emit hasActiveDownloadsChanged();
         qCDebug(CATEGORY_ASSETPACKS) << "[QUEUE] Added pack to upload queue:" << packId << "Queue size:" << m_uploadQueue.size();
         
         // Mark pack as in queue
@@ -581,6 +587,13 @@ void AssetPacks::uninstallAssetPack(const QString &packId)
     if (!m_backend || !m_backend->device())
     {
         emit uninstallFinished(packId, false, "No device connected");
+        return;
+    }
+
+    // Check if RPC session is available and up
+    if (!m_backend->device()->rpc() || !m_backend->device()->rpc()->isSessionUp())
+    {
+        emit uninstallFinished(packId, false, "RPC session not ready");
         return;
     }
 
@@ -659,6 +672,13 @@ void AssetPacks::createAssetPackManifest(const QString &packId, const QString &a
         return;
     }
 
+    // Check if RPC session is available and up
+    if (!m_backend->device()->rpc() || !m_backend->device()->rpc()->isSessionUp())
+    {
+        qCDebug(CATEGORY_MANIFESTS) << "Cannot create manifest - RPC session not ready";
+        return;
+    }
+
     // Resolve folders list from JSON if available; fallback to provided folder name
     QStringList foldersForManifest;
     int packIndex = m_idsList.indexOf(packId);
@@ -726,6 +746,20 @@ void AssetPacks::checkInstalledPacks()
         return;
     }
 
+    // Check if RPC session is available and up
+    if (!m_backend->device()->rpc() || !m_backend->device()->rpc()->isSessionUp())
+    {
+        qCDebug(CATEGORY_MANIFESTS) << "Cannot check installed packs - RPC session not ready";
+        return;
+    }
+
+    // Skip if initial scan already completed (only scan once when page opens or when explicitly requested)
+    if (m_initialScanCompleted)
+    {
+        qCDebug(CATEGORY_MANIFESTS) << "Skipping asset pack scan - initial scan already completed";
+        return;
+    }
+
     qCDebug(CATEGORY_MANIFESTS) << "Checking installed asset packs via manifest files";
 
     // List the .manifests directory inside asset_packs to find .pack files
@@ -776,6 +810,10 @@ void AssetPacks::checkInstalledPacks()
         
         // Update UI with found packs
         updatePackStatusesFromInstalledList(installedPacks);
+        
+        // Mark initial scan as completed
+        m_initialScanCompleted = true;
+        qCDebug(CATEGORY_MANIFESTS) << "Initial asset pack scan completed";
         
         listOp->deleteLater(); });
 }
@@ -844,6 +882,13 @@ void AssetPacks::checkSha256ForInstalledPacks(const QStringList &installedPacks)
     if (!m_backend || !m_backend->device())
     {
         qCDebug(CATEGORY_SHA256) << "Cannot check sha256 - no device connected";
+        return;
+    }
+
+    // Check if RPC session is available and up
+    if (!m_backend->device()->rpc() || !m_backend->device()->rpc()->isSessionUp())
+    {
+        qCDebug(CATEGORY_SHA256) << "Cannot check sha256 - RPC session not ready";
         return;
     }
 
@@ -1041,6 +1086,7 @@ void AssetPacks::processUploadQueue()
     updateAssetPackQueueStatus(upload.packId, false);
 
     m_isUploading = true;
+    emit hasActiveDownloadsChanged();
     startUpload(upload);
 }
 
@@ -1151,6 +1197,7 @@ void AssetPacks::startUpload(const QueuedUpload &upload)
             
             // Mark upload as finished and process next in queue
             m_isUploading = false;
+            emit hasActiveDownloadsChanged();
             qCDebug(CATEGORY_ASSETPACKS) << "[QUEUE] Upload finished for pack:" << upload.packId << "Processing next in queue";
             
             // Process next item in queue
@@ -1173,6 +1220,7 @@ void AssetPacks::startUpload(const QueuedUpload &upload)
         } catch (...) {
             qCDebug(CATEGORY_ASSETPACKS) << "[FINISH] Exception in upload finished handler";
             m_isUploading = false;
+            emit hasActiveDownloadsChanged();
             // Still try to process next in queue
             QTimer::singleShot(500, this, [this]() {
                 processUploadQueue();
@@ -1185,6 +1233,10 @@ void AssetPacks::startUpload(const QueuedUpload &upload)
 void AssetPacks::refreshInstalledPacks()
 {
     qCDebug(CATEGORY_MANIFESTS) << "Manual refresh of installed packs requested";
+    
+    // Reset scan completed flag to allow manual refresh
+    m_initialScanCompleted = false;
+    
     if (m_backend && m_backend->device())
     {
         checkInstalledPacks();
@@ -1198,6 +1250,10 @@ void AssetPacks::refreshInstalledPacks()
 void AssetPacks::forceRefreshDetection()
 {
     qCDebug(CATEGORY_MANIFESTS) << "Force refresh detection requested";
+    
+    // Reset scan completed flag to allow forced refresh
+    m_initialScanCompleted = false;
+    
     if (m_backend && m_backend->device())
     {
         // Clear current status first
@@ -1222,6 +1278,9 @@ void AssetPacks::onManifestCreated(const QString &packId)
     // First, ensure the pack is marked as installed locally
     updateAssetPackStatus(packId, true);
 
+    // Reset scan flag to allow re-detection after installation
+    m_initialScanCompleted = false;
+
     // Then refresh detection to ensure consistency
     checkInstalledPacks();
 
@@ -1229,5 +1288,11 @@ void AssetPacks::onManifestCreated(const QString &packId)
     QTimer::singleShot(2000, this, [this, packId]()
                        {
         qCDebug(CATEGORY_MANIFESTS) << "Second detection check for pack:" << packId;
+        m_initialScanCompleted = false;
         checkInstalledPacks(); });
+}
+
+bool AssetPacks::hasActiveDownloads() const
+{
+    return m_isUploading || !m_uploadQueue.isEmpty();
 }

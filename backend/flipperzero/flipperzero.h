@@ -30,6 +30,9 @@ public:
     Zero::ProtobufSession *rpc() const;
     Zero::UtilityInterface *utility() const;
 
+    void setRpcAutostartEnabled(bool enabled);
+    bool rpcAutostartEnabled() const;
+
     bool canUpdate(const Flipper::Updates::VersionInfo &versionInfo) const;
     bool canInstall(const Flipper::Updates::VersionInfo &versionInfo) const;
     bool canRepair(const Flipper::Updates::VersionInfo &versionInfo) const;
@@ -63,6 +66,7 @@ private:
     Zero::ProtobufSession *m_rpc;
     Zero::RecoveryInterface *m_recovery;
     Zero::UtilityInterface *m_utility;
+    bool m_rpcAutostartEnabled;
 };
 
 }

@@ -2,6 +2,7 @@
 
 #include <QObject>
 #include <QByteArray>
+#include <QVariantList>
 
 namespace Flipper {
 class FlipperZero;
@@ -11,6 +12,7 @@ namespace Zero {
 class VirtualDisplay : public QObject
 {
     Q_OBJECT
+    Q_PROPERTY(DisplayState displayState READ displayState NOTIFY displayStateChanged)
 
 public:
     enum DisplayState {
@@ -32,7 +34,9 @@ signals:
 
 public slots:
     void start(const QByteArray &firstFrame = QByteArray());
+    void startFromArray(const QVariantList &frameData = QVariantList());
     void sendFrame(const QByteArray &screenFrame);
+    void sendFrameFromArray(const QVariantList &frameData);
     void stop();
 
 private slots:
